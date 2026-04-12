@@ -254,6 +254,164 @@
       font-size: 15px;
     }
 
+    /* Screenshots */
+    .screenshots {
+      padding: 100px 0;
+      background: #f1f5f9;
+    }
+
+    .screenshots h3 {
+      text-align: center;
+      font-size: 40px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .screenshots > .container > p {
+      text-align: center;
+      color: var(--gray);
+      font-size: 18px;
+      margin-bottom: 60px;
+    }
+
+    .screenshot-frame {
+      max-width: 900px;
+      margin: 0 auto;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      border: 1px solid #e2e8f0;
+      background: var(--dark);
+    }
+
+    .screenshot-frame img {
+      width: 100%;
+      display: block;
+    }
+
+    .screenshot-placeholder {
+      width: 100%;
+      aspect-ratio: 16/10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: linear-gradient(135deg, var(--dark-card) 0%, var(--dark) 100%);
+      color: #94a3b8;
+    }
+
+    .screenshot-placeholder svg {
+      width: 64px;
+      height: 64px;
+      opacity: 0.5;
+    }
+
+    .screenshot-caption {
+      text-align: center;
+      color: var(--gray);
+      font-size: 15px;
+      margin-top: 16px;
+    }
+
+    /* Installation */
+    .installation {
+      padding: 100px 0;
+      background: white;
+    }
+
+    .installation h3 {
+      text-align: center;
+      font-size: 40px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .installation > .container > p {
+      text-align: center;
+      color: var(--gray);
+      font-size: 18px;
+      margin-bottom: 60px;
+    }
+
+    .install-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .install-card {
+      padding: 32px;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+    }
+
+    .install-card h4 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .install-card ol {
+      padding-left: 20px;
+    }
+
+    .install-card li {
+      color: var(--gray);
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    .install-card code {
+      background: var(--light);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    .install-card a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .install-card a:hover {
+      text-decoration: underline;
+    }
+
+    .build-source {
+      max-width: 700px;
+      margin: 40px auto 0;
+      padding: 24px;
+      background: var(--light);
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .build-source h4 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .build-source pre {
+      background: var(--dark);
+      color: #e2e8f0;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+
+    .build-source p {
+      color: var(--gray);
+      font-size: 14px;
+      margin-top: 8px;
+    }
+
     /* Download */
     .download {
       padding: 100px 0;
@@ -342,7 +500,15 @@
         grid-template-columns: 1fr;
       }
 
+      .install-grid {
+        grid-template-columns: 1fr;
+      }
+
       .hero-buttons {
+        flex-direction: column;
+      }
+
+      .download-buttons {
         flex-direction: column;
       }
     }
@@ -367,6 +533,8 @@
       </div>
       <nav>
         <a href="#features">Features</a>
+        <a href="#screenshots">Screenshots</a>
+        <a href="#install">Install</a>
         <a href="#download">Download</a>
         <a href="https://github.com/ajamj/pantaunet" target="_blank">GitHub</a>
       </nav>
@@ -461,6 +629,65 @@
           <h4>System Tray</h4>
           <p>Run in the background with system tray integration and quick access menu.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screenshots" id="screenshots">
+    <div class="container">
+      <h3>Screenshots</h3>
+      <p>See Pantaunet in action</p>
+      <div class="screenshot-frame">
+        <div class="screenshot-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          <span>Pantaunet Dashboard Screenshot</span>
+        </div>
+      </div>
+      <p class="screenshot-caption">The Pantaunet dashboard showing real-time speeds, network history chart, and per-application usage.</p>
+    </div>
+  </section>
+
+  <section class="installation" id="install">
+    <div class="container">
+      <h3>Installation</h3>
+      <p>Get started in minutes</p>
+      <div class="install-grid">
+        <div class="install-card">
+          <h4>🪟 Windows</h4>
+          <ol>
+            <li>Download the <a href="https://github.com/ajamj/pantaunet/releases" target="_blank">.exe installer</a></li>
+            <li>Run the installer and follow the prompts</li>
+            <li>Launch from Start Menu or system tray</li>
+          </ol>
+        </div>
+        <div class="install-card">
+          <h4>🐧 Linux</h4>
+          <ol>
+            <li>Download the <a href="https://github.com/ajamj/pantaunet/releases" target="_blank">.AppImage</a></li>
+            <li>Make it executable: <code>chmod +x Pantaunet-*.AppImage</code></li>
+            <li>Run: <code>./Pantaunet-*.AppImage</code></li>
+          </ol>
+        </div>
+        <div class="install-card">
+          <h4>🍎 macOS</h4>
+          <ol>
+            <li>Download the <a href="https://github.com/ajamj/pantaunet/releases" target="_blank">.dmg</a></li>
+            <li>Open the DMG and drag Pantaunet to Applications</li>
+            <li>Launch from Launchpad</li>
+          </ol>
+        </div>
+      </div>
+      <div class="build-source">
+        <h4>Build from Source</h4>
+        <pre>git clone https://github.com/ajamj/pantaunet.git
+cd pantaunet
+npm install
+npm run tauri build</pre>
+        <p>Requires Node.js 18+, Rust 1.70+, and npm.</p>
       </div>
     </div>
   </section>

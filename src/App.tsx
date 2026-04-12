@@ -113,6 +113,68 @@ function App() {
   const lastNotified = useRef<number>(0);
   const lastSpeedNotified = useRef<number>(0);
 
+  // Data export functions
+  async function exportCSV() {
+    const date = new Date().toISOString().split("T")[0];
+    const filename = `pantaunet-export-${date}.csv`;
+
+    let csv = "Time,Download Bytes,Upload Bytes\n";
+    for (const row of history) {
+      csv += `${row.time},${row.download},${row.upload}\n`;
+    }
+
+    if (stats) {
+      csv += "\n\nSummary\n";
+      csv += `Total Download,${stats.total_download}\n`;
+      csv += `Total Upload,${stats.total_upload}\n`;
+      csv += `Timestamp,${stats.timestamp}\n`;
+    }
+
+    if (stats && stats.processes.length > 0) {
+      csv +=
+        "\n\nProcess,Download Bytes,Upload Bytes,Download Speed,Upload Speed\n";
+      for (const proc of stats.processes) {
+        csv += `${proc.name},${proc.download_bytes},${proc.upload_bytes},${proc.download_speed},${proc.upload_speed}\n`;
+      }
+    }
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function exportJSON() {
+    const date = new Date().toISOString().split("T")[0];
+    const filename = `pantaunet-export-${date}.json`;
+
+    const data = {
+      exportedAt: new Date().toISOString(),
+      history,
+      summary: stats
+        ? {
+            totalDownload: stats.total_download,
+            totalUpload: stats.total_upload,
+            timestamp: stats.timestamp,
+          }
+        : null,
+      processes: stats?.processes || [],
+    };
+
+    const json = JSON.stringify(data, null, 2);
+
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   useEffect(() => {
     const init = async () => {
       // Load persisted settings
@@ -533,6 +595,29 @@ function App() {
                     <option value={5000}>5s</option>
                     <option value={10000}>10s</option>
                   </select>
+                </div>
+
+                {/* Data Export */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                  <label className="block text-sm font-medium mb-3">
+                    Export Data
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={exportCSV}
+                      disabled={!stats || history.length === 0}
+                      className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                    >
+                      Export CSV
+                    </button>
+                    <button
+                      onClick={exportJSON}
+                      disabled={!stats || history.length === 0}
+                      className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                    >
+                      Export JSON
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
