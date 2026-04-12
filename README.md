@@ -74,6 +74,10 @@ npm run tauri dev
 - **State**: Zustand
 - **Backend**: Rust with sysinfo crate
 
+## Known Limitations
+
+- **Per-process IO includes disk + network**: On Windows, per-application download/upload values include all I/O operations (disk reads/writes, network traffic, device I/O). This is because sysinfo uses Windows `GetProcessIoCounters` API. A future release will use ETW-based tracking for network-only accuracy.
+
 ## Contributing
 
 Contributions are welcome! Please read the [contributing guidelines](CONTRIBUTING.md) first.
