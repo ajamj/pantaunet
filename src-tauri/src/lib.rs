@@ -38,6 +38,7 @@ pub struct AppState {
     last_total_down: Mutex<u64>,
     last_total_up: Mutex<u64>,
     last_update: Mutex<i64>,
+    theme: Mutex<String>, // "dark" or "light"
 }
 
 fn format_bytes(bytes: u64) -> String {
@@ -202,6 +203,7 @@ fn get_system_info() -> HashMap<String, String> {
 fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let show_item = MenuItemBuilder::with_id("show", "Show Window").build(app)?;
     let hide_item = MenuItemBuilder::with_id("hide", "Hide Window").build(app)?;
+    let theme_item = MenuItemBuilder::with_id("toggle_theme", "Toggle Theme: Dark → Light").build(app)?;
     let speed_item = MenuItemBuilder::with_id("speed", "Toggle Speed Display").build(app)?;
     let separator1 = tauri::menu::PredefinedMenuItem::separator(app)?;
     let quit_item = tauri::menu::PredefinedMenuItem::quit(app, Some("Quit"))?;
@@ -209,16 +211,21 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let menu = MenuBuilder::new(app)
         .item(&show_item)
         .item(&hide_item)
+        .item(&theme_item)
         .separator()
         .item(&speed_item)
         .item(&separator1)
         .item(&quit_item)
         .build()?;
 
+    // Build initial tooltip with theme
+    let theme_emoji = "🌙";
+    let tooltip = format!("{} Dark — Pantaunet", theme_emoji);
+
     let _tray = TrayIconBuilder::with_id("main")
         .icon(app.default_window_icon().unwrap().clone())
         .menu(&menu)
-        .tooltip("Pantaunet - Internet Monitor")
+        .tooltip(&tooltip)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "show" => {
                 if let Some(window) = app.get_webview_window("main") {
@@ -229,6 +236,34 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
             "hide" => {
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.hide();
+                }
+            }
+            "toggle_theme" => {
+                if let Some(state) = app.try_state::<Arc<AppState>>() {
+                    let mut theme = state.theme.lock().unwrap();
+                    let new_theme = if *theme == "dark" {
+                        "light".to_string()
+                    } else {
+                        "dark".to_string()
+                    };
+                    *theme = new_theme.clone();
+
+                    // Update menu item label (stored for future dynamic update)
+                    let _new_label = if new_theme == "dark" {
+                        "Toggle Theme: Light → Dark"
+                    } else {
+                        "Toggle Theme: Dark → Light"
+                    };
+
+                    // Update tooltip
+                    let tooltip_emoji = if new_theme == "dark" { "🌙" } else { "☀️" };
+                    let tooltip = format!("{} {} — Pantaunet", tooltip_emoji, new_theme);
+                    if let Some(tray) = app.tray_by_id("main") {
+                        let _ = tray.set_tooltip(Some(&tooltip));
+                    }
+
+                    // Emit event to frontend
+                    let _ = app.emit("theme-changed", new_theme);
                 }
             }
             "speed" => {
@@ -267,6 +302,7 @@ pub fn run() {
         last_total_down: Mutex::new(0),
         last_total_up: Mutex::new(0),
         last_update: Mutex::new(0),
+        theme: Mutex::new("dark".to_string()),
     });
 
     let state_clone = app_state.clone();

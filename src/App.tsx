@@ -23,6 +23,29 @@ import {
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { Store } from "@tauri-apps/plugin-store";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
+
+// Settings store — persisted across sessions
+const store = new Store("settings.json");
+
+interface AppSettings {
+  theme: string;
+  usageThresholdMB: number;
+  speedThresholdMBps: number;
+  updateIntervalMs: number;
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+  theme: "dark",
+  usageThresholdMB: 1000,
+  speedThresholdMBps: 10,
+  updateIntervalMs: 1000,
+};
 
 interface ProcessNetworkUsage {
   pid: number;
@@ -77,15 +100,57 @@ function App() {
   const [darkMode, setDarkMode] = useState(true);
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [usageThreshold, setUsageThreshold] = useState(1000);
+  const [usageThreshold, setUsageThreshold] = useState(
+    DEFAULT_SETTINGS.usageThresholdMB * 1024 * 1024
+  );
+  const [speedThreshold, setSpeedThreshold] = useState(
+    DEFAULT_SETTINGS.speedThresholdMBps * 1024 * 1024
+  );
+  const [updateInterval, setUpdateInterval] = useState(
+    DEFAULT_SETTINGS.updateIntervalMs
+  );
   const [showSpeed, setShowSpeed] = useState(true);
   const lastNotified = useRef<number>(0);
+  const lastSpeedNotified = useRef<number>(0);
 
   useEffect(() => {
-    setLoading(false);
+    const init = async () => {
+      // Load persisted settings
+      const savedTheme = await store.get<string>("theme");
+      const savedUsageThreshold = await store.get<number>("usageThresholdMB");
+      const savedSpeedThreshold = await store.get<number>("speedThresholdMBps");
+      const savedInterval = await store.get<number>("updateIntervalMs");
+
+      if (savedTheme) setDarkMode(savedTheme === "dark");
+      if (savedUsageThreshold !== null && savedUsageThreshold !== undefined) {
+        setUsageThreshold(savedUsageThreshold * 1024 * 1024);
+      }
+      if (savedSpeedThreshold !== null && savedSpeedThreshold !== undefined) {
+        setSpeedThreshold(savedSpeedThreshold * 1024 * 1024);
+      }
+      if (savedInterval !== null && savedInterval !== undefined) {
+        setUpdateInterval(savedInterval);
+      }
+
+      setLoading(false);
+
+      // Request notification permission
+      const granted = await isPermissionGranted();
+      if (!granted) {
+        await requestPermission();
+      }
+    };
+    init();
 
     const unlistenSpeed = listen("toggle-speed", () => {
       setShowSpeed((prev) => !prev);
+    });
+
+    const unlistenTheme = listen<string>("theme-changed", async (event) => {
+      const newTheme = event.payload;
+      setDarkMode(newTheme === "dark");
+      await store.set("theme", newTheme);
+      await store.save();
     });
 
     const interval = setInterval(async () => {
@@ -111,23 +176,46 @@ function App() {
           return newHistory.slice(-60);
         });
 
+        // Usage threshold notification
         const oneHourAgo = Date.now() - 3600000;
         if (
-          data.total_download > usageThreshold * 1024 * 1024 &&
+          data.total_download > usageThreshold &&
           lastNotified.current < oneHourAgo
         ) {
           lastNotified.current = Date.now();
+          if (await isPermissionGranted()) {
+            sendNotification({
+              title: "Pantaunet - Usage Alert",
+              body: `Total download exceeded ${Math.round(usageThreshold / (1024 * 1024))} MB`,
+            });
+          }
+        }
+
+        // Speed threshold notification
+        if (
+          (data.download_speed > speedThreshold ||
+            data.upload_speed > speedThreshold) &&
+          lastSpeedNotified.current < oneHourAgo
+        ) {
+          lastSpeedNotified.current = Date.now();
+          if (await isPermissionGranted()) {
+            sendNotification({
+              title: "Pantaunet - Speed Alert",
+              body: `Network speed exceeded ${Math.round(speedThreshold / (1024 * 1024))} MB/s`,
+            });
+          }
         }
       } catch (err) {
         console.error("Failed to fetch network stats:", err);
       }
-    }, 1000);
+    }, updateInterval);
 
     return () => {
       clearInterval(interval);
       unlistenSpeed.then((fn) => fn());
+      unlistenTheme.then((fn) => fn());
     };
-  }, [usageThreshold]);
+  }, [usageThreshold, updateInterval, speedThreshold]);
 
   return (
     <div className={`${darkMode ? "dark" : ""} h-screen w-full bg-gray-900`}>
@@ -351,18 +439,100 @@ function App() {
               </div>
 
               <div className="space-y-4">
+                {/* Theme Selection */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Theme</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="theme"
+                        value="dark"
+                        checked={darkMode}
+                        onChange={async () => {
+                          setDarkMode(true);
+                          await store.set("theme", "dark");
+                          await store.save();
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <span>🌙 Dark</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="theme"
+                        value="light"
+                        checked={!darkMode}
+                        onChange={async () => {
+                          setDarkMode(false);
+                          await store.set("theme", "light");
+                          await store.save();
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <span>☀️ Light</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Usage Threshold */}
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Usage Notification Threshold (MB)
                   </label>
                   <input
                     type="number"
-                    value={usageThreshold / 1024}
-                    onChange={(e) =>
-                      setUsageThreshold((parseInt(e.target.value) || 0) * 1024)
-                    }
+                    value={Math.round(usageThreshold / (1024 * 1024))}
+                    onChange={async (e) => {
+                      const mb = parseInt(e.target.value) || 0;
+                      setUsageThreshold(mb * 1024 * 1024);
+                      await store.set("usageThresholdMB", mb);
+                      await store.save();
+                    }}
                     className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0"
                   />
+                </div>
+
+                {/* Speed Threshold */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Speed Notification Threshold (MB/s)
+                  </label>
+                  <input
+                    type="number"
+                    value={Math.round(speedThreshold / (1024 * 1024))}
+                    onChange={async (e) => {
+                      const mbps = parseInt(e.target.value) || 0;
+                      setSpeedThreshold(mbps * 1024 * 1024);
+                      await store.set("speedThresholdMBps", mbps);
+                      await store.save();
+                    }}
+                    className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0"
+                  />
+                </div>
+
+                {/* Update Interval */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Update Interval
+                  </label>
+                  <select
+                    value={updateInterval}
+                    onChange={async (e) => {
+                      const interval = parseInt(e.target.value);
+                      setUpdateInterval(interval);
+                      await store.set("updateIntervalMs", interval);
+                      await store.save();
+                    }}
+                    className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0"
+                  >
+                    <option value={500}>500ms</option>
+                    <option value={1000}>1s</option>
+                    <option value={2000}>2s</option>
+                    <option value={5000}>5s</option>
+                    <option value={10000}>10s</option>
+                  </select>
                 </div>
               </div>
             </div>
