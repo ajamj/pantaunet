@@ -208,6 +208,7 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     let _tray = TrayIconBuilder::new()
+        .icon(app.default_window_icon().unwrap().clone())
         .menu(&menu)
         .tooltip("Pantaunet - Internet Monitor")
         .on_menu_event(|app, event| match event.id().as_ref() {
