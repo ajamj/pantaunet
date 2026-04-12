@@ -35,7 +35,6 @@ pub struct NetworkStats {
 pub struct AppState {
     system: Mutex<System>,
     networks: Mutex<Networks>,
-    previous_stats: Mutex<HashMap<u32, (u64, u64)>>,
     last_total_down: Mutex<u64>,
     last_total_up: Mutex<u64>,
     last_update: Mutex<i64>,
@@ -74,7 +73,6 @@ fn format_speed(bytes_per_sec: u64) -> String {
 fn get_network_usage(state: tauri::State<'_, Arc<AppState>>) -> Result<NetworkStats, String> {
     let system = state.system.lock().map_err(|e| e.to_string())?;
     let networks = state.networks.lock().map_err(|e| e.to_string())?;
-    let previous_stats = state.previous_stats.lock().map_err(|e| e.to_string())?;
     let last_total_down = *state.last_total_down.lock().map_err(|e| e.to_string())?;
     let last_total_up = *state.last_total_up.lock().map_err(|e| e.to_string())?;
 
@@ -107,50 +105,29 @@ fn get_network_usage(state: tauri::State<'_, Arc<AppState>>) -> Result<NetworkSt
         0
     };
 
-    let mut current_stats: HashMap<u32, (u64, u64)> = HashMap::new();
     let mut processes: Vec<ProcessNetworkUsage> = Vec::new();
 
     for (pid, process) in system.processes() {
         let pid_u32 = pid.as_u32();
         let name = process.name().to_string_lossy().to_string();
 
-        let net_usage = sysinfo::Networks::new_with_refreshed_list();
-        let (download, upload) = get_network_stats(&net_usage);
-
-        let prev = previous_stats.get(&pid_u32).copied().unwrap_or((0, 0));
-
-        let speed_down = if delta_time > 0.0 && prev.0 > 0 {
-            ((download.saturating_sub(prev.0)) as f64 / delta_time) as u64
-        } else {
-            0
-        };
-        let speed_up = if delta_time > 0.0 && prev.1 > 0 {
-            ((upload.saturating_sub(prev.1)) as f64 / delta_time) as u64
-        } else {
-            0
-        };
-
-        current_stats.insert(pid_u32, (download, upload));
-
-        if download > 0 || upload > 0 || speed_down > 0 || speed_up > 0 {
-            processes.push(ProcessNetworkUsage {
-                pid: pid_u32,
-                name,
-                download_bytes: download,
-                upload_bytes: upload,
-                download_speed: speed_down,
-                upload_speed: speed_up,
-            });
+        if name.is_empty() {
+            continue;
         }
+
+        processes.push(ProcessNetworkUsage {
+            pid: pid_u32,
+            name,
+            download_bytes: 0,
+            upload_bytes: 0,
+            download_speed: 0,
+            upload_speed: 0,
+        });
     }
 
-    processes.sort_by(|a, b| {
-        (b.download_speed + b.upload_speed).cmp(&(a.download_speed + a.upload_speed))
-    });
-
+    processes.sort_by(|a, b| a.name.cmp(&b.name));
     processes.truncate(20);
 
-    *state.previous_stats.lock().unwrap() = current_stats;
     *state.last_total_down.lock().unwrap() = total_download;
     *state.last_total_up.lock().unwrap() = total_upload;
     *state.last_update.lock().unwrap() = current_time;
@@ -243,7 +220,6 @@ pub fn run() {
     let app_state = Arc::new(AppState {
         system: Mutex::new(System::new_all()),
         networks: Mutex::new(Networks::new_with_refreshed_list()),
-        previous_stats: Mutex::new(HashMap::new()),
         last_total_down: Mutex::new(0),
         last_total_up: Mutex::new(0),
         last_update: Mutex::new(0),
