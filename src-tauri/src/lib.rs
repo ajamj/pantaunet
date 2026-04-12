@@ -6,7 +6,7 @@ use sysinfo::{Networks, System};
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager,
+    AppHandle, Emitter, Manager,
 };
 
 mod network;
@@ -69,6 +69,12 @@ fn format_speed(bytes_per_sec: u64) -> String {
     }
 }
 
+/// Returns per-process IO statistics.
+///
+/// Note: On Windows, `disk_usage()` uses GetProcessIoCounters which reports ALL I/O
+/// (disk + network + device). Per-process values include both disk and network activity.
+/// This is a documented v1 limitation. A v2 upgrade path uses ETW or GetPerTcpConnectionEStats
+/// for network-only accuracy.
 #[tauri::command]
 fn get_network_usage(state: tauri::State<'_, Arc<AppState>>) -> Result<NetworkStats, String> {
     let system = state.system.lock().map_err(|e| e.to_string())?;
@@ -76,22 +82,20 @@ fn get_network_usage(state: tauri::State<'_, Arc<AppState>>) -> Result<NetworkSt
     let last_total_down = *state.last_total_down.lock().map_err(|e| e.to_string())?;
     let last_total_up = *state.last_total_up.lock().map_err(|e| e.to_string())?;
 
-    let current_time = std::time::SystemTime::now()
+    let current_time_sec = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|e| e.to_string())?
         .as_secs() as i64;
 
     let (total_download, total_upload) = get_network_stats(&networks);
 
-    let delta_time = if state.last_update.lock().is_ok() {
-        let last = *state.last_update.lock().unwrap();
+    let delta_time = {
+        let last = *state.last_update.lock().map_err(|e| e.to_string())?;
         if last > 0 {
-            (current_time - last).max(1) as f64
+            ((current_time_sec - last).max(1)) as f64
         } else {
             1.0
         }
-    } else {
-        1.0
     };
 
     let download_speed = if delta_time > 0.0 {
@@ -115,22 +119,43 @@ fn get_network_usage(state: tauri::State<'_, Arc<AppState>>) -> Result<NetworkSt
             continue;
         }
 
+        let disk_usage = process.disk_usage();
+        // sysinfo 0.33: read_bytes/written_bytes are already deltas since last refresh
+        let download_bytes = disk_usage.read_bytes;
+        let upload_bytes = disk_usage.written_bytes;
+
+        // Skip processes with zero IO activity
+        if download_bytes == 0 && upload_bytes == 0 {
+            continue;
+        }
+
+        // Speed = delta / refresh_interval (delta_time is ~1 second from background thread)
+        let download_speed = (download_bytes as f64 / delta_time) as u64;
+        let upload_speed = (upload_bytes as f64 / delta_time) as u64;
+
         processes.push(ProcessNetworkUsage {
             pid: pid_u32,
             name,
-            download_bytes: 0,
-            upload_bytes: 0,
-            download_speed: 0,
-            upload_speed: 0,
+            download_bytes,
+            upload_bytes,
+            download_speed,
+            upload_speed,
         });
     }
 
-    processes.sort_by(|a, b| a.name.cmp(&b.name));
+    // Sort by total bandwidth descending
+    processes.sort_by(|a, b| {
+        let total_a = a.download_bytes + a.upload_bytes;
+        let total_b = b.download_bytes + b.upload_bytes;
+        total_b.cmp(&total_a)
+    });
+
+    // Keep top 20
     processes.truncate(20);
 
     *state.last_total_down.lock().unwrap() = total_download;
     *state.last_total_up.lock().unwrap() = total_upload;
-    *state.last_update.lock().unwrap() = current_time;
+    *state.last_update.lock().unwrap() = current_time_sec;
 
     Ok(NetworkStats {
         processes,
@@ -138,7 +163,7 @@ fn get_network_usage(state: tauri::State<'_, Arc<AppState>>) -> Result<NetworkSt
         total_upload,
         download_speed,
         upload_speed,
-        timestamp: current_time,
+        timestamp: current_time_sec,
     })
 }
 
@@ -176,15 +201,21 @@ fn get_system_info() -> HashMap<String, String> {
 
 fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let show_item = MenuItemBuilder::with_id("show", "Show Window").build(app)?;
-    let quit_item = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
+    let hide_item = MenuItemBuilder::with_id("hide", "Hide Window").build(app)?;
+    let speed_item = MenuItemBuilder::with_id("speed", "Toggle Speed Display").build(app)?;
+    let separator1 = tauri::menu::PredefinedMenuItem::separator(app)?;
+    let quit_item = tauri::menu::PredefinedMenuItem::quit(app, Some("Quit"))?;
 
     let menu = MenuBuilder::new(app)
         .item(&show_item)
+        .item(&hide_item)
         .separator()
+        .item(&speed_item)
+        .item(&separator1)
         .item(&quit_item)
         .build()?;
 
-    let _tray = TrayIconBuilder::new()
+    let _tray = TrayIconBuilder::with_id("main")
         .icon(app.default_window_icon().unwrap().clone())
         .menu(&menu)
         .tooltip("Pantaunet - Internet Monitor")
@@ -195,13 +226,26 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                     let _ = window.set_focus();
                 }
             }
+            "hide" => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+            }
+            "speed" => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.emit("toggle-speed", ());
+                }
+            }
             "quit" => {
                 app.exit(0);
             }
             _ => {}
         })
         .on_tray_icon_event(|tray, event| match event {
-            TrayIconEvent::Click { .. } => {
+            TrayIconEvent::Click {
+                button: tauri::tray::MouseButton::Left,
+                ..
+            } => {
                 let app = tray.app_handle();
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.show();
@@ -257,7 +301,7 @@ pub fn run() {
                     system.refresh_all();
                 }
                 if let Ok(mut networks) = state.networks.lock() {
-                    networks.refresh();
+                    networks.refresh(true);
                 }
             });
 

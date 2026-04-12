@@ -18,8 +18,11 @@ import {
   Upload,
   Activity,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 interface ProcessNetworkUsage {
   pid: number;
@@ -75,10 +78,15 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [usageThreshold, setUsageThreshold] = useState(1000);
+  const [showSpeed, setShowSpeed] = useState(true);
   const lastNotified = useRef<number>(0);
 
   useEffect(() => {
     setLoading(false);
+
+    const unlistenSpeed = listen("toggle-speed", () => {
+      setShowSpeed((prev) => !prev);
+    });
 
     const interval = setInterval(async () => {
       try {
@@ -115,7 +123,10 @@ function App() {
       }
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      unlistenSpeed.then((fn) => fn());
+    };
   }, [usageThreshold]);
 
   return (
@@ -135,6 +146,33 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSpeed(!showSpeed)}
+              className={`p-2 rounded-lg transition-colors ${
+                showSpeed
+                  ? "bg-blue-500 text-white hover:bg-blue-600"
+                  : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+              }`}
+              title={showSpeed ? "Hide Real-time Speed" : "Show Real-time Speed"}
+            >
+              {showSpeed ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+            </button>
+            {showSpeed && stats && (
+              <div className="flex items-center gap-3 px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <div className="flex items-center gap-1">
+                  <ArrowDown className="w-4 h-4 text-green-500" />
+                  <span className="text-sm font-medium text-green-500">
+                    {formatSpeed(stats.download_speed)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <ArrowUp className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium text-blue-500">
+                    {formatSpeed(stats.upload_speed)}
+                  </span>
+                </div>
+              </div>
+            )}
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
