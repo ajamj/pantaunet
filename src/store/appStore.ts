@@ -12,6 +12,7 @@ interface AppState {
   showSpeed: boolean;
   showDynamicIcon: boolean;
   showDesktopWidget: boolean;
+  historyTimeRange: number;
   
   setDarkMode: (dark: boolean) => Promise<void>;
   setUsageThreshold: (mb: number) => Promise<void>;
@@ -20,6 +21,7 @@ interface AppState {
   setShowSpeed: (show: boolean) => void;
   setShowDynamicIcon: (show: boolean) => Promise<void>;
   setShowDesktopWidget: (show: boolean) => void;
+  setHistoryTimeRange: (range: number) => Promise<void>;
   
   blockedApps: string[];
   blockApp: (name: string) => Promise<void>;
@@ -36,6 +38,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   showSpeed: true,
   showDynamicIcon: true,
   showDesktopWidget: false,
+  historyTimeRange: 86400, // Default 24h
   blockedApps: [],
 
   setDarkMode: async (dark) => {
@@ -71,6 +74,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     await tauriStore.set("dynamicIconEnabled", show);
     await tauriStore.save();
     await invoke("set_dynamic_icon_enabled", { enabled: show });
+  },
+
+  setHistoryTimeRange: async (range) => {
+    set({ historyTimeRange: range });
+    await tauriStore.set("historyTimeRange", range);
+    await tauriStore.save();
   },
 
   setShowDesktopWidget: async (show) => {
@@ -127,6 +136,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const interval = await tauriStore.get("updateIntervalMs") as number | null;
     const dynamicIcon = await tauriStore.get("dynamicIconEnabled") as boolean | null;
     const widgetVisible = await tauriStore.get("widgetVisible") as boolean | null;
+    const historyRange = await tauriStore.get("historyTimeRange") as number | null;
     const blockedApps = await tauriStore.get("blockedApps") as string[] | null;
 
     set({
@@ -136,6 +146,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       updateInterval: interval || 1000,
       showDynamicIcon: dynamicIcon !== null ? dynamicIcon : true,
       showDesktopWidget: widgetVisible || false,
+      historyTimeRange: historyRange !== null ? historyRange : 86400,
       blockedApps: blockedApps || [],
     });
   },
