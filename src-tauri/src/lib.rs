@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use sysinfo::{Networks, System};
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{TrayIconBuilder, TrayIconEvent},
@@ -11,7 +10,14 @@ use tauri::{
 
 mod network;
 pub mod icon_generator;
-use network::{get_network_stats, is_online};
+mod monitor_error;
+mod monitor_trait;
+mod mock_monitor;
+mod utils;
+
+use monitor_trait::MonitoringTrait;
+use network::WindowsMonitor;
+use utils::{format_bytes, format_speed};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessNetworkUsage {
@@ -34,138 +40,48 @@ pub struct NetworkStats {
 }
 
 pub struct AppState {
-    system: Mutex<System>,
-    networks: Mutex<Networks>,
-    last_total_down: Mutex<u64>,
-    last_total_up: Mutex<u64>,
+    pub monitor: Box<dyn MonitoringTrait + Send + Sync>,
     last_update: Mutex<i64>,
     theme: Mutex<String>, // "dark" or "light"
     show_dynamic_icon: Mutex<bool>,
 }
 
-fn format_bytes(bytes: u64) -> String {
-    const KB: u64 = 1024;
-    const MB: u64 = KB * 1024;
-    const GB: u64 = MB * 1024;
-
-    if bytes >= GB {
-        format!("{:.2} GB", bytes as f64 / GB as f64)
-    } else if bytes >= MB {
-        format!("{:.2} MB", bytes as f64 / MB as f64)
-    } else if bytes >= KB {
-        format!("{:.2} KB", bytes as f64 / KB as f64)
-    } else {
-        format!("{} B", bytes)
-    }
-}
-
-fn format_speed(bytes_per_sec: u64) -> String {
-    const KB: u64 = 1024;
-    const MB: u64 = KB * 1024;
-
-    if bytes_per_sec >= MB {
-        format!("{:.1} MB/s", bytes_per_sec as f64 / MB as f64)
-    } else if bytes_per_sec >= KB {
-        format!("{:.1} KB/s", bytes_per_sec as f64 / KB as f64)
-    } else {
-        format!("{} B/s", bytes_per_sec)
-    }
-}
-
-/// Returns per-process IO statistics.
-///
-/// Note: On Windows, `disk_usage()` uses GetProcessIoCounters which reports ALL I/O
-/// (disk + network + device). Per-process values include both disk and network activity.
-/// This is a documented v1 limitation. A v2 upgrade path uses ETW or GetPerTcpConnectionEStats
-/// for network-only accuracy.
 #[tauri::command]
 fn get_network_usage(state: tauri::State<'_, Arc<AppState>>) -> Result<NetworkStats, String> {
-    let system = state.system.lock().map_err(|e| e.to_string())?;
-    let networks = state.networks.lock().map_err(|e| e.to_string())?;
-    let last_total_down = *state.last_total_down.lock().map_err(|e| e.to_string())?;
-    let last_total_up = *state.last_total_up.lock().map_err(|e| e.to_string())?;
-
     let current_time_sec = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|e| e.to_string())?
         .as_secs() as i64;
 
-    let (total_download, total_upload) = get_network_stats(&networks);
-
     let delta_time = {
-        let last = *state.last_update.lock().map_err(|e| e.to_string())?;
-        if last > 0 {
-            ((current_time_sec - last).max(1)) as f64
+        let mut last = state.last_update.lock().map_err(|e| e.to_string())?;
+        let delta = if *last > 0 {
+            ((current_time_sec - *last).max(1)) as f64
         } else {
             1.0
-        }
+        };
+        *last = current_time_sec;
+        delta
     };
 
-    let download_speed = if delta_time > 0.0 {
-        ((total_download.saturating_sub(last_total_down)) as f64 / delta_time) as u64
-    } else {
-        0
-    };
-    let upload_speed = if delta_time > 0.0 {
-        ((total_upload.saturating_sub(last_total_up)) as f64 / delta_time) as u64
-    } else {
-        0
-    };
+    let global_stats = state.monitor.get_global_stats(delta_time).map_err(|e| e.to_string())?;
+    let processes_stats = state.monitor.get_process_stats(delta_time).map_err(|e| e.to_string())?;
 
-    let mut processes: Vec<ProcessNetworkUsage> = Vec::new();
-
-    for (pid, process) in system.processes() {
-        let pid_u32 = pid.as_u32();
-        let name = process.name().to_string_lossy().to_string();
-
-        if name.is_empty() {
-            continue;
-        }
-
-        let disk_usage = process.disk_usage();
-        // sysinfo 0.33: read_bytes/written_bytes are already deltas since last refresh
-        let download_bytes = disk_usage.read_bytes;
-        let upload_bytes = disk_usage.written_bytes;
-
-        // Skip processes with zero IO activity
-        if download_bytes == 0 && upload_bytes == 0 {
-            continue;
-        }
-
-        // Speed = delta / refresh_interval (delta_time is ~1 second from background thread)
-        let download_speed = (download_bytes as f64 / delta_time) as u64;
-        let upload_speed = (upload_bytes as f64 / delta_time) as u64;
-
-        processes.push(ProcessNetworkUsage {
-            pid: pid_u32,
-            name,
-            download_bytes,
-            upload_bytes,
-            download_speed,
-            upload_speed,
-        });
-    }
-
-    // Sort by total bandwidth descending
-    processes.sort_by(|a, b| {
-        let total_a = a.download_bytes + a.upload_bytes;
-        let total_b = b.download_bytes + b.upload_bytes;
-        total_b.cmp(&total_a)
-    });
-
-    // Keep top 20
-    processes.truncate(20);
-
-    *state.last_total_down.lock().unwrap() = total_download;
-    *state.last_total_up.lock().unwrap() = total_upload;
-    *state.last_update.lock().unwrap() = current_time_sec;
+    let processes = processes_stats.into_iter().take(20).map(|p| ProcessNetworkUsage {
+        pid: p.pid,
+        name: p.name,
+        download_bytes: p.download_bytes,
+        upload_bytes: p.upload_bytes,
+        download_speed: p.download_speed,
+        upload_speed: p.upload_speed,
+    }).collect();
 
     Ok(NetworkStats {
         processes,
-        total_download,
-        total_upload,
-        download_speed,
-        upload_speed,
+        total_download: global_stats.total_download,
+        total_upload: global_stats.total_upload,
+        download_speed: global_stats.download_speed,
+        upload_speed: global_stats.upload_speed,
         timestamp: current_time_sec,
     })
 }
@@ -182,6 +98,7 @@ fn format_speed_command(bytes_per_sec: u64) -> String {
 
 #[tauri::command]
 fn get_system_info() -> HashMap<String, String> {
+    use sysinfo::System;
     let mut info = HashMap::new();
     let system = System::new_all();
 
@@ -206,16 +123,6 @@ fn get_system_info() -> HashMap<String, String> {
 fn set_dynamic_icon_enabled(state: tauri::State<'_, Arc<AppState>>, enabled: bool) -> Result<(), String> {
     if let Ok(mut show) = state.show_dynamic_icon.lock() {
         *show = enabled;
-    }
-    Ok(())
-}
-
-#[tauri::command]
-fn test_dynamic_icon(app_handle: AppHandle) -> Result<(), String> {
-    let buffer = icon_generator::generate_tray_icon(1024 * 1024, 1024 * 512);
-    if let Some(tray) = app_handle.tray_by_id("main") {
-        let icon = tauri::image::Image::new_owned(buffer, 32, 32);
-        tray.set_icon(Some(icon)).map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -289,13 +196,6 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                     };
                     *theme = new_theme.clone();
 
-                    // Update menu item label (stored for future dynamic update)
-                    let _new_label = if new_theme == "dark" {
-                        "Toggle Theme: Light → Dark"
-                    } else {
-                        "Toggle Theme: Dark → Light"
-                    };
-
                     // Update tooltip
                     let tooltip_emoji = if new_theme == "dark" { "🌙" } else { "☀️" };
                     let tooltip = format!("{} {} — Pantaunet", tooltip_emoji, new_theme);
@@ -320,7 +220,7 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .on_tray_icon_event(|tray, event| match event {
             TrayIconEvent::Click {
                 button: tauri::tray::MouseButton::Left,
-                ..
+                .. 
             } => {
                 let app = tray.app_handle();
                 if let Some(window) = app.get_webview_window("main") {
@@ -338,10 +238,7 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app_state = Arc::new(AppState {
-        system: Mutex::new(System::new_all()),
-        networks: Mutex::new(Networks::new_with_refreshed_list()),
-        last_total_down: Mutex::new(0),
-        last_total_up: Mutex::new(0),
+        monitor: Box::new(WindowsMonitor::new()),
         last_update: Mutex::new(0),
         theme: Mutex::new("dark".to_string()),
         show_dynamic_icon: Mutex::new(true),
@@ -369,7 +266,6 @@ pub fn run() {
             format_bytes_command,
             format_speed_command,
             get_system_info,
-            test_dynamic_icon,
             toggle_widget,
             set_dynamic_icon_enabled
         ])
@@ -401,73 +297,24 @@ pub fn run() {
                     delta
                 };
 
-                // 2. Refresh system/networks and get stats
-                let mut total_download = 0;
-                let mut total_upload = 0;
-                let mut is_connected = false;
-                let mut top_processes: Vec<ProcessNetworkUsage> = Vec::new();
-
-                if let Ok(mut system) = state.system.lock() {
-                    system.refresh_all();
-
-                    // Task 1: Extract top 3 apps
-                    for (pid, process) in system.processes() {
-                        let name = process.name().to_string_lossy().to_string();
-                        if name.is_empty() { continue; }
-                        let disk_usage = process.disk_usage();
-                        if disk_usage.read_bytes == 0 && disk_usage.written_bytes == 0 { continue; }
-
-                        top_processes.push(ProcessNetworkUsage {
-                            pid: pid.as_u32(),
-                            name,
-                            download_bytes: disk_usage.read_bytes,
-                            upload_bytes: disk_usage.written_bytes,
-                            download_speed: (disk_usage.read_bytes as f64 / delta_time) as u64,
-                            upload_speed: (disk_usage.written_bytes as f64 / delta_time) as u64,
-                        });
-                    }
-                    top_processes.sort_by(|a, b| (b.download_bytes + b.upload_bytes).cmp(&(a.download_bytes + a.upload_bytes)));
-                    top_processes.truncate(3);
-                }
-
-                if let Ok(mut networks) = state.networks.lock() {
-                    networks.refresh(true);
-                    let (down, up) = get_network_stats(&networks);
-                    total_download = down;
-                    total_upload = up;
-                    is_connected = is_online(&networks);
-                }
-
-                // 3. Calculate total speeds
-                let (down_speed, up_speed) = {
-                    let mut last_down = state.last_total_down.lock().unwrap();  
-                    let mut last_up = state.last_total_up.lock().unwrap();
-
-                    let ds = if *last_down > 0 {
-                        (total_download.saturating_sub(*last_down) as f64 / delta_time) as u64
-                    } else {
-                        0
-                    };
-                    let us = if *last_up > 0 {
-                        (total_upload.saturating_sub(*last_up) as f64 / delta_time) as u64
-                    } else {
-                        0
-                    };
-
-                    *last_down = total_download;
-                    *last_up = total_upload;
-
-                    (ds, us)
+                // 2. Refresh stats using trait
+                let global_stats = match state.monitor.get_global_stats(delta_time) {
+                    Ok(stats) => stats,
+                    Err(_) => continue,
+                };
+                let process_stats = match state.monitor.get_process_stats(delta_time) {
+                    Ok(stats) => stats,
+                    Err(_) => Vec::new(),
                 };
 
-                // 4. Update Tray
+                // 3. Update Tray
                 if let Some(tray) = app_handle.tray_by_id("main") {
                     let is_dynamic_enabled = *state.show_dynamic_icon.lock().unwrap();
-                    
+
                     // Update Icon
                     if is_dynamic_enabled {
-                        let buffer = icon_generator::generate_tray_icon(down_speed, up_speed);
-                        let icon = tauri::image::Image::new_owned(buffer, 32, 32);  
+                        let buffer = icon_generator::generate_tray_icon(global_stats.download_speed, global_stats.upload_speed);
+                        let icon = tauri::image::Image::new_owned(buffer, 32, 32);
                         let _ = tray.set_icon(Some(icon));
                         last_dynamic_icon_state = true;
                     } else if last_dynamic_icon_state {
@@ -478,18 +325,18 @@ pub fn run() {
                         last_dynamic_icon_state = false;
                     }
 
-                    // Task 2: Implement dynamic tooltip generation
-                    let status = if is_connected { "Online" } else { "Offline" };
+                    // Update Tooltip
+                    let status = if global_stats.is_online { "Online" } else { "Offline" };
                     let mut tooltip = format!(
                         "Pantaunet: {}\nDown: {} | Up: {}",
                         status,
-                        format_speed(down_speed),
-                        format_speed(up_speed)
+                        format_speed(global_stats.download_speed),
+                        format_speed(global_stats.upload_speed)
                     );
 
-                    if !top_processes.is_empty() {
+                    if !process_stats.is_empty() {
                         tooltip.push_str("\n---");
-                        for (i, proc) in top_processes.iter().enumerate() {
+                        for (i, proc) in process_stats.iter().take(3).enumerate() {
                             tooltip.push_str(&format!(
                                 "\n{}. {}: {}",
                                 i + 1,
@@ -502,6 +349,7 @@ pub fn run() {
                     let _ = tray.set_tooltip(Some(&tooltip));
                 }
             });
+
             // Verify window initialization and enforce properties
             let main_window = app.get_webview_window("main");
             let widget_window = app.get_webview_window("widget");

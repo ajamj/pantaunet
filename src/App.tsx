@@ -66,37 +66,10 @@ interface NetworkStats {
   timestamp: number;
 }
 
-function formatBytes(bytes: number): string {
-  const KB = 1024;
-  const MB = KB * 1024;
-  const GB = MB * 1024;
-
-  if (bytes >= GB) {
-    return `${(bytes / GB).toFixed(2)} GB`;
-  } else if (bytes >= MB) {
-    return `${(bytes / MB).toFixed(2)} MB`;
-  } else if (bytes >= KB) {
-    return `${(bytes / KB).toFixed(2)} KB`;
-  }
-  return `${bytes} B`;
-}
-
-function formatSpeed(bytesPerSec: number): string {
-  const KB = 1024;
-  const MB = KB * 1024;
-
-  if (bytesPerSec >= MB) {
-    return `${(bytesPerSec / MB).toFixed(1)} MB/s`;
-  } else if (bytesPerSec >= KB) {
-    return `${(bytesPerSec / KB).toFixed(1)} KB/s`;
-  }
-  return `${bytesPerSec} B/s`;
-}
-
 function App() {
   const [stats, setStats] = useState<NetworkStats | null>(null);
   const [history, setHistory] = useState<
-    { time: string; download: number; upload: number }[]
+    { time: string; download: number; upload: number; downloadStr: string; uploadStr: string }[]
   >([]);
   const [darkMode, setDarkMode] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -115,6 +88,50 @@ function App() {
   const [showDesktopWidget, setShowDesktopWidget] = useState(false);
   const lastNotified = useRef<number>(0);
   const lastSpeedNotified = useRef<number>(0);
+
+  const [formattedStats, setFormattedStats] = useState<{
+    total_download: string;
+    total_upload: string;
+    download_speed: string;
+    upload_speed: string;
+    processes: { pid: number; name: string; download_speed: string; upload_speed: string; total: string }[];
+  } | null>(null);
+
+  // Helper to format via backend
+  const formatBytes = (bytes: number) => invoke<string>("format_bytes_command", { bytes });
+  const formatSpeed = (bytesPerSec: number) => invoke<string>("format_speed_command", { bytesPerSec });
+
+  // Update formatted stats when raw stats change
+  useEffect(() => {
+    if (!stats) return;
+
+    const updateFormatted = async () => {
+      const [total_download, total_upload, download_speed, upload_speed] = await Promise.all([
+        formatBytes(stats.total_download),
+        formatBytes(stats.total_upload),
+        formatSpeed(stats.download_speed),
+        formatSpeed(stats.upload_speed)
+      ]);
+
+      const processes = await Promise.all(stats.processes.slice(0, 10).map(async (p) => ({
+        pid: p.pid,
+        name: p.name,
+        download_speed: await formatSpeed(p.download_speed),
+        upload_speed: await formatSpeed(p.upload_speed),
+        total: await formatBytes(p.download_bytes + p.upload_bytes)
+      })));
+
+      setFormattedStats({
+        total_download,
+        total_upload,
+        download_speed,
+        upload_speed,
+        processes
+      });
+    };
+
+    updateFormatted();
+  }, [stats]);
 
   // Data export functions
   async function exportCSV() {
@@ -261,6 +278,9 @@ function App() {
           .toString()
           .padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
 
+        const ds = await formatSpeed(data.download_speed);
+        const us = await formatSpeed(data.upload_speed);
+
         setHistory((prev) => {
           const newHistory = [
             ...prev,
@@ -268,6 +288,8 @@ function App() {
               time,
               download: data.download_speed,
               upload: data.upload_speed,
+              downloadStr: ds,
+              uploadStr: us,
             },
           ];
           return newHistory.slice(-60);
@@ -318,7 +340,7 @@ function App() {
   const windowLabel = (window as any).__TAURI_INTERNALS__?.metadata?.windowLabel;
 
   if (windowLabel === "widget") {
-    return <Widget stats={stats} />;
+    return <Widget stats={stats} downloadStr={formattedStats?.download_speed} uploadStr={formattedStats?.upload_speed} />;
   }
 
   return (
@@ -349,18 +371,18 @@ function App() {
             >
               {showSpeed ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
             </button>
-            {showSpeed && stats && (
+            {showSpeed && formattedStats && (
               <div className="flex items-center gap-3 px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
                 <div className="flex items-center gap-1">
                   <ArrowDown className="w-4 h-4 text-green-500" />
                   <span className="text-sm font-medium text-green-500">
-                    {formatSpeed(stats.download_speed)}
+                    {formattedStats.download_speed}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <ArrowUp className="w-4 h-4 text-blue-500" />
                   <span className="text-sm font-medium text-blue-500">
-                    {formatSpeed(stats.upload_speed)}
+                    {formattedStats.upload_speed}
                   </span>
                 </div>
               </div>
@@ -377,23 +399,23 @@ function App() {
             >
               <Settings className="w-5 h-5" />
             </button>
-          </div>
-        </header>
+            </div>
+            </header>
 
-        {/* Main Content */}
-        <main className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-80px)]">
-          {/* Speed Meters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Main Content */}
+            <main className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-80px)]">
+            {/* Speed Meters */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
               <div className="flex items-center gap-3 mb-4">
                 <ArrowDown className="w-6 h-6 text-green-500" />
                 <span className="text-gray-500 dark:text-gray-400">Download</span>
               </div>
               <div className="text-4xl font-bold text-green-500">
-                {stats ? formatSpeed(stats.download_speed) : "---"}
+                {formattedStats ? formattedStats.download_speed : "---"}
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                Total: {stats ? formatBytes(stats.total_download) : "---"}
+                Total: {formattedStats ? formattedStats.total_download : "---"}
               </div>
             </div>
 
@@ -403,13 +425,13 @@ function App() {
                 <span className="text-gray-500 dark:text-gray-400">Upload</span>
               </div>
               <div className="text-4xl font-bold text-blue-500">
-                {stats ? formatSpeed(stats.upload_speed) : "---"}
+                {formattedStats ? formattedStats.upload_speed : "---"}
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                Total: {stats ? formatBytes(stats.total_upload) : "---"}
+                Total: {formattedStats ? formattedStats.total_upload : "---"}
               </div>
             </div>
-          </div>
+            </div>
 
           {/* Chart */}
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
@@ -430,10 +452,13 @@ function App() {
                     stroke={darkMode ? "#6b7280" : "#9ca3af"}
                     fontSize={10}
                     tickLine={false}
-                    tickFormatter={(v) => formatSpeed(v)}
                   />
                   <Tooltip
-                    formatter={(value) => formatSpeed(Number(value))}
+                    labelFormatter={(label) => `Time: ${label}`}
+                    formatter={(_value, name, props) => {
+                      const entry = props.payload;
+                      return [name === "Download" ? entry.downloadStr : entry.uploadStr, name];
+                    }}
                     contentStyle={{
                       backgroundColor: darkMode ? "#1f2937" : "#fff",
                       border: "none",
@@ -456,20 +481,20 @@ function App() {
                     dot={false}
                     name="Upload"
                   />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+                  </LineChart>
+                  </ResponsiveContainer>
+                  </div>
+                  </div>
 
-          {/* Process List */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              Top Processes
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
+                  {/* Process List */}
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  Top Processes
+                  </h3>
+                  <div className="overflow-x-auto">
+                  <table className="w-full">
+                  <thead>
                   <tr className="text-left text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
                     <th className="pb-3 font-medium">Process</th>
                     <th className="pb-3 font-medium">PID</th>
@@ -483,9 +508,9 @@ function App() {
                     </th>
                     <th className="pb-3 font-medium text-right">Total</th>
                   </tr>
-                </thead>
-                <tbody>
-                  {stats?.processes.slice(0, 10).map((proc, idx) => (
+                  </thead>
+                  <tbody>
+                  {formattedStats?.processes.map((proc, idx) => (
                     <tr
                       key={proc.pid}
                       className="border-b border-gray-100 dark:border-gray-700 last:border-0"
@@ -502,13 +527,13 @@ function App() {
                         {proc.pid}
                       </td>
                       <td className="py-3 text-right text-green-500">
-                        {formatSpeed(proc.download_speed)}
+                        {proc.download_speed}
                       </td>
                       <td className="py-3 text-right text-blue-500">
-                        {formatSpeed(proc.upload_speed)}
+                        {proc.upload_speed}
                       </td>
                       <td className="py-3 text-right">
-                        {formatBytes(proc.download_bytes + proc.upload_bytes)}
+                        {proc.total}
                       </td>
                     </tr>
                   ))}
