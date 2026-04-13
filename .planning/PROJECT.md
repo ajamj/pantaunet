@@ -110,4 +110,4 @@ This document evolves at phase transitions and milestone boundaries.
 ---
 
 *Last updated: 2026-04-13*
-*Milestone: v2.1 (Issue Resolution & Stability)*
+*Milestone: v2.1.0 (Released)*

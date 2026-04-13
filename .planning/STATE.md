@@ -5,12 +5,18 @@
 | Property | Value |
 |----------|-------|
 | **Project** | Pantaunet |
-| **Milestone** | v2.1 (Issue Resolution & Stability) |
-| **Phase** | 17 - Bug Resolution (Core Stability) |
+| **Milestone** | v2.1.0 (Released) |
+| **Phase** | Milestone Complete |
 | **Created** | 2026-04-13 |
 | **Mode** | GSD |
 
-## Milestone v2.1 Progress
+## Milestone v2.1.0 Summary
+
+- **Version**: 2.1.0
+- **Status**: Successfully released to GitHub.
+- **Key Changes**: Resolved 7 prioritized issues, implemented "Academic Dark" theme, optimized IPC performance (80x reduction), and hardened CI/CD infrastructure.
+
+## Milestone v2.1.0 Progress
 
 | Phase | Name | Status | Completion |
 |-------|------|--------|------------|
@@ -21,9 +27,9 @@
 
 ## Current Position
 
-- **Last completed**: Phase 20 (CI/CD Hardening)
-- **Current focus**: Milestone Complete
-- **Status**: Milestone v2.1: "Issue Resolution & Stability" has been successfully completed. All 7 open GitHub issues were resolved, verified by CI, and merged into main. The application is now significantly more stable, has a modern high-contrast theme, and is protected by a robust CI/CD pipeline.
+- **Last completed**: v2.1.0 Release
+- **Current focus**: Planning Milestone v2.2 (App Control & Advanced Analytics)
+- **Status**: Milestone v2.1.0: "Issue Resolution & Stability" has been successfully completed and released. The application is now stable, optimized, and features a modern high-contrast UI. We are ready to begin planning for enhanced application control and deeper usage analytics.
 
 ## Quick Links
 
