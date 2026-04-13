@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Pantaunet - Internet Monitor",
         "width": 900,
         "height": 650,
@@ -22,6 +23,18 @@
         "fullscreen": false,
         "decorations": true,
         "transparent": false
+      },
+      {
+        "label": "widget",
+        "title": "Pantaunet Widget",
+        "width": 180,
+        "height": 60,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "hiddenTitle": true,
+        "skipTaskbar": true,
+        "visible": false
       }
     ],
     "trayIcon": {
