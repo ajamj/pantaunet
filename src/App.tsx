@@ -29,6 +29,7 @@ import {
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
+import { Widget } from "./components/Widget";
 
 // Settings store — persisted across sessions
 const store = new Store("settings.json");
@@ -278,6 +279,12 @@ function App() {
       unlistenTheme.then((fn) => fn());
     };
   }, [usageThreshold, updateInterval, speedThreshold]);
+
+  const windowLabel = (window as any).__TAURI_INTERNALS__?.metadata?.windowLabel;
+
+  if (windowLabel === "widget") {
+    return <Widget stats={stats} />;
+  }
 
   return (
     <div className={`${darkMode ? "dark" : ""} h-screen w-full bg-gray-900`}>
