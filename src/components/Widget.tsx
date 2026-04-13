@@ -57,8 +57,8 @@ export function Widget({ stats, downloadStr, uploadStr }: WidgetProps) {
     };
   }, []);
 
-  const handleMouseDown = () => {
-    getCurrentWindow().startDragging();
+  const handleMouseDown = async () => {
+    await getCurrentWindow().startDragging();
   };
 
   const handleDoubleClick = async () => {
@@ -88,11 +88,12 @@ export function Widget({ stats, downloadStr, uploadStr }: WidgetProps) {
             iconSize={3.5} 
             textSize="text-[10px]" 
             color="text-emerald-400" 
+            data-tauri-drag-region
           />
         </div>
       </div>
 
-      <div className="h-4 w-[1px] bg-white/10" />
+      <div className="h-4 w-[1px] bg-white/10" data-tauri-drag-region />
 
       <div className="flex items-center gap-1 pr-1" data-tauri-drag-region>
         <SpeedDisplay 
@@ -101,6 +102,7 @@ export function Widget({ stats, downloadStr, uploadStr }: WidgetProps) {
           iconSize={3.5} 
           textSize="text-[10px]" 
           color="text-sky-400" 
+          data-tauri-drag-region
         />
       </div>
     </div>
