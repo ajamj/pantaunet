@@ -300,6 +300,22 @@ pub fn run() {
             allow_process
         ])
         .setup(move |app| {
+            // CR-01: Initialize database during application setup
+            let app_dir = app.path().app_data_dir().expect("Failed to get app data dir");
+            std::fs::create_dir_all(&app_dir).ok();
+            let db_path = app_dir.join("history.db");
+            
+            match database::Database::new(db_path) {
+                Ok(db) => {
+                    if let Ok(mut db_opt) = state_clone.db.lock() {
+                        *db_opt = Some(db);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Failed to initialize database: {:?}", e);
+                }
+            }
+
             setup_tray(app.handle())?;
 
             // Background monitoring loop (1s refresh)
