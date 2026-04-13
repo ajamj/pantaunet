@@ -34,7 +34,7 @@ export const HistoryTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
+      <div className="bg-white dark:bg-[#0a0a0a] rounded-xl p-6 shadow-lg">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Clock className="w-5 h-5" />
           Long-Term Network Usage (All Time)

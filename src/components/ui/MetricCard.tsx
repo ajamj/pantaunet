@@ -15,7 +15,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   type,
 }) => {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-transparent hover:border-blue-500/20 transition-all duration-300">
+    <div className="bg-white dark:bg-[#0a0a0a] rounded-xl p-6 shadow-lg border border-transparent hover:border-blue-500/20 transition-all duration-300">
       <div className="flex items-center gap-3 mb-4">
         <SpeedDisplay type={type} value={title} iconSize={6} color="text-gray-500 dark:text-gray-400" />
       </div>

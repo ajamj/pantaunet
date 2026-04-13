@@ -78,7 +78,7 @@ function App() {
   const lastNotified = useRef<number>(0);
   const lastSpeedNotified = useRef<number>(0);
 
-  const [formattedStats, setFormattedStats] = useState<{
+  const [formattedStats, setFormattedStats] = useState<{ 
     total_download: string;
     total_upload: string;
     download_speed: string;
@@ -207,7 +207,7 @@ function App() {
       setShowSpeed(!showSpeed);
     });
 
-    const unlistenTheme = listen<string>("theme-changed", async (event) => {       
+    const unlistenTheme = listen<string>("theme-changed", async (event) => {
       const newTheme = event.payload;
       await setDarkMode(newTheme === "dark");
     });
@@ -294,10 +294,10 @@ function App() {
   }
 
   return (
-    <div className={`${darkMode ? "dark" : ""} h-screen w-full bg-gray-900`}>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
+    <div className={`${darkMode ? "dark" : ""} h-screen w-full bg-black`}>
+      <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-gray-100 transition-colors">
         {/* Header */}
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+        <header className="bg-white dark:bg-[#0a0a0a] border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-500 rounded-lg shadow-md shadow-blue-500/20">
               <Wifi className="w-6 h-6 text-white" />
@@ -313,10 +313,10 @@ function App() {
             </div>
           </div>
           
-          <div className="flex gap-1 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-lg">
+          <div className="flex gap-1 bg-gray-100 dark:bg-[#111]/50 p-1 rounded-lg">
             <button
               onClick={() => setActiveTab("dashboard")}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${ 
                 activeTab === "dashboard"
                   ? "bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm"
                   : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
@@ -326,7 +326,7 @@ function App() {
             </button>
             <button
               onClick={() => setActiveTab("history")}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${ 
                 activeTab === "history"
                   ? "bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm"
                   : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
@@ -339,7 +339,7 @@ function App() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSpeed(!showSpeed)}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-2 rounded-lg transition-colors ${ 
                 showSpeed
                   ? "bg-blue-500 text-white hover:bg-blue-600"
                   : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
@@ -349,7 +349,7 @@ function App() {
               {showSpeed ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
             </button>
             {showSpeed && formattedStats && (
-              <div className="flex items-center gap-3 px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+              <div className="flex items-center gap-3 px-3 py-1 bg-gray-100 dark:bg-[#111] rounded-lg">
                 <SpeedDisplay type="download" value={formattedStats.download_speed} />
                 <SpeedDisplay type="upload" value={formattedStats.upload_speed} />
               </div>
@@ -369,8 +369,8 @@ function App() {
           </div>
         </header>
 
-            {/* Main Content */}
-            <main className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-80px)]">
+        {/* Main Content */}
+        <main className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-80px)]">
           {/* Speed Meters */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <MetricCard 
@@ -388,7 +388,7 @@ function App() {
           </div>
 
           {/* Chart */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
+          <div className="bg-white dark:bg-[#0a0a0a] rounded-xl p-6 shadow-lg">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Activity className="w-5 h-5" />
               Network Speed History
@@ -435,25 +435,26 @@ function App() {
                     dot={false}
                     name="Upload"
                   />
-                  </LineChart>
-                  </ResponsiveContainer>
-                  </div>
-                  </div>
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
 
-                  {/* Process List */}
-                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <Activity className="w-5 h-5" />
-                      Top Processes
-                    </h3>
-                    <ProcessTable processes={formattedStats?.processes || []} loading={loading} />
-                  </div>        </main>
+          {/* Process List */}
+          <div className="bg-white dark:bg-[#0a0a0a] rounded-xl p-6 shadow-lg">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              Top Processes
+            </h3>
+            <ProcessTable processes={formattedStats?.processes || []} loading={loading} />
+          </div>
+        </main>
 
         {/* Settings Panel */}
         {settingsOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6 sticky top-0 bg-white dark:bg-gray-800 py-1">
+            <div className="bg-white dark:bg-[#0a0a0a] rounded-xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6 sticky top-0 bg-white dark:bg-[#0a0a0a] py-1">
                 <h2 className="text-xl font-bold">Settings</h2>
                 <button
                   onClick={() => setSettingsOpen(false)}
@@ -490,14 +491,14 @@ function App() {
                   <div className="flex gap-4">
                     <button
                       onClick={() => setDarkMode(true)}
-                      className={`flex items-center gap-2 p-2 rounded-lg flex-1 justify-center transition-colors ${darkMode ? 'bg-blue-500 text-white' : 'bg-gray-50 dark:bg-gray-700/50'}`}
+                      className={`flex items-center gap-2 p-2 rounded-lg flex-1 justify-center transition-colors ${darkMode ? 'bg-blue-500 text-white' : 'bg-gray-50 dark:bg-[#111]'}`}
                     >
                       <Moon className="w-4 h-4" />
                       <span>Dark</span>
                     </button>
                     <button
                       onClick={() => setDarkMode(false)}
-                      className={`flex items-center gap-2 p-2 rounded-lg flex-1 justify-center transition-colors ${!darkMode ? 'bg-blue-500 text-white' : 'bg-gray-50 dark:bg-gray-700/50'}`}
+                      className={`flex items-center gap-2 p-2 rounded-lg flex-1 justify-center transition-colors ${!darkMode ? 'bg-blue-500 text-white' : 'bg-gray-50 dark:bg-[#111]'}`}
                     >
                       <Sun className="w-4 h-4" />
                       <span>Light</span>
@@ -534,7 +535,7 @@ function App() {
                   <select
                     value={updateInterval}
                     onChange={(e) => setUpdateInterval(parseInt(e.target.value))}
-                    className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+                    className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#111] border-0 focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
                   >
                     <option value={500}>High (500ms)</option>
                     <option value={1000}>Normal (1s)</option>
@@ -551,14 +552,14 @@ function App() {
                     <button
                       onClick={exportCSV}
                       disabled={!stats || history.length === 0}
-                      className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                      className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#111] hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                     >
                       Export CSV
                     </button>
                     <button
                       onClick={exportJSON}
                       disabled={!stats || history.length === 0}
-                      className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                      className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#111] hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                     >
                       Export JSON
                     </button>
