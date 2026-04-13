@@ -24,6 +24,7 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { Widget } from "./components/Widget";
+import { HistoryTab } from "./components/ui/HistoryTab";
 import { useAppStore } from "./store/appStore";
 import { SpeedDisplay } from "./components/ui/SpeedDisplay";
 import { MetricCard } from "./components/ui/MetricCard";
@@ -78,12 +79,23 @@ function App() {
   const lastNotified = useRef<number>(0);
   const lastSpeedNotified = useRef<number>(0);
 
-  const [formattedStats, setFormattedStats] = useState<{ 
+  const [formattedStats, setFormattedStats] = useState<{
     total_download: string;
     total_upload: string;
     download_speed: string;
     upload_speed: string;
-    processes: { pid: number; name: string; download_speed: string; upload_speed: string; total: string }[];
+    processes: {
+      pid: number;
+      name: string;
+      download_speed: string;
+      upload_speed: string;
+      total_download: string;
+      total_upload: string;
+      download_speed_raw: number;
+      upload_speed_raw: number;
+      total_download_raw: number;
+      total_upload_raw: number;
+    }[];
   } | null>(null);
 
   // Helper to format via backend
@@ -102,12 +114,17 @@ function App() {
         formatSpeed(stats.upload_speed)
       ]);
 
-      const processes = await Promise.all(stats.processes.slice(0, 10).map(async (p) => ({
+      const processes = await Promise.all(stats.processes.slice(0, 20).map(async (p) => ({
         pid: p.pid,
         name: p.name,
         download_speed: await formatSpeed(p.download_speed),
         upload_speed: await formatSpeed(p.upload_speed),
-        total: await formatBytes(p.download_bytes + p.upload_bytes)
+        total_download: await formatBytes(p.download_bytes),
+        total_upload: await formatBytes(p.upload_bytes),
+        download_speed_raw: p.download_speed,
+        upload_speed_raw: p.upload_speed,
+        total_download_raw: p.download_bytes,
+        total_upload_raw: p.upload_bytes
       })));
 
       setFormattedStats({
@@ -224,7 +241,7 @@ function App() {
 
         const now = new Date();
         const time = `${now.getHours().toString().padStart(2, "0")}:${now
-          .getMinutes()
+          .getMinutes()}
           .toString()
           .padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
 
@@ -285,7 +302,7 @@ function App() {
       unlistenTheme.then((fn) => fn());
       unlistenWidget.then((fn) => fn());
     };
-  }, [usageThreshold, updateInterval, speedThreshold]);
+  }, [usageThreshold, updateInterval, speedThreshold, showSpeed]);
 
   const windowLabel = (window as any).__TAURI_INTERNALS__?.metadata?.windowLabel;
 
@@ -318,7 +335,7 @@ function App() {
               onClick={() => setActiveTab("dashboard")}
               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${ 
                 activeTab === "dashboard"
-                  ? "bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm"
+                  ? "bg-white dark:bg-[#0a0a0a] text-blue-600 dark:text-blue-400 shadow-sm"
                   : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
             >
@@ -328,7 +345,7 @@ function App() {
               onClick={() => setActiveTab("history")}
               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${ 
                 activeTab === "history"
-                  ? "bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm"
+                  ? "bg-white dark:bg-[#0a0a0a] text-blue-600 dark:text-blue-400 shadow-sm"
                   : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
             >
@@ -342,7 +359,7 @@ function App() {
               className={`p-2 rounded-lg transition-colors ${ 
                 showSpeed
                   ? "bg-blue-500 text-white hover:bg-blue-600"
-                  : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                  : "bg-gray-200 dark:bg-[#111] hover:bg-gray-300 dark:hover:bg-gray-600"
               }`}
               title={showSpeed ? "Hide Real-time Speed" : "Show Real-time Speed"}
             >
@@ -356,13 +373,13 @@ function App() {
             )}
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#111] transition-colors"
             >
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
             <button
               onClick={() => setSettingsOpen(true)}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#111] transition-colors"
             >
               <Settings className="w-5 h-5" />
             </button>
@@ -371,83 +388,89 @@ function App() {
 
         {/* Main Content */}
         <main className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-80px)]">
-          {/* Speed Meters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <MetricCard 
-              title="Download" 
-              type="download"
-              value={formattedStats ? formattedStats.download_speed : "---"}
-              total={formattedStats ? formattedStats.total_download : "---"}
-            />
-            <MetricCard 
-              title="Upload" 
-              type="upload"
-              value={formattedStats ? formattedStats.upload_speed : "---"}
-              total={formattedStats ? formattedStats.total_upload : "---"}
-            />
-          </div>
+          {activeTab === "dashboard" ? (
+            <>
+              {/* Speed Meters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <MetricCard 
+                  title="Download" 
+                  type="download"
+                  value={formattedStats ? formattedStats.download_speed : "---"}
+                  total={formattedStats ? formattedStats.total_download : "---"}
+                />
+                <MetricCard 
+                  title="Upload" 
+                  type="upload"
+                  value={formattedStats ? formattedStats.upload_speed : "---"}
+                  total={formattedStats ? formattedStats.total_upload : "---"}
+                />
+              </div>
 
-          {/* Chart */}
-          <div className="bg-white dark:bg-[#0a0a0a] rounded-xl p-6 shadow-lg">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              Network Speed History
-            </h3>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={history}>
-                  <XAxis
-                    dataKey="time"
-                    stroke={darkMode ? "#6b7280" : "#9ca3af"}
-                    fontSize={10}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    stroke={darkMode ? "#6b7280" : "#9ca3af"}
-                    fontSize={10}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    labelFormatter={(label) => `Time: ${label}`}
-                    formatter={(_value, name, props) => {
-                      const entry = props.payload;
-                      return [name === "Download" ? entry.downloadStr : entry.uploadStr, name];
-                    }}
-                    contentStyle={{
-                      backgroundColor: darkMode ? "#1f2937" : "#fff",
-                      border: "none",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="download"
-                    stroke="#22c55e"
-                    strokeWidth={2}
-                    dot={false}
-                    name="Download"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="upload"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={false}
-                    name="Upload"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+              {/* Chart */}
+              <div className="bg-white dark:bg-[#0a0a0a] rounded-xl p-6 shadow-lg">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  Network Speed History
+                </h3>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={history}>
+                      <XAxis
+                        dataKey="time"
+                        stroke={darkMode ? "#6b7280" : "#9ca3af"}
+                        fontSize={10}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        stroke={darkMode ? "#6b7280" : "#9ca3af"}
+                        fontSize={10}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        labelFormatter={(label) => `Time: ${label}`}
+                        formatter={(_value, name, props) => {
+                          const entry = props.payload;
+                          return [name === "Download" ? entry.downloadStr : entry.uploadStr, name];
+                        }}
+                        contentStyle={{
+                          backgroundColor: darkMode ? "#1f2937" : "#fff",
+                          border: "none",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="download"
+                        stroke="#22c55e"
+                        strokeWidth={2}
+                        dot={false}
+                        name="Download"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="upload"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        dot={false}
+                        name="Upload"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
 
-          {/* Process List */}
-          <div className="bg-white dark:bg-[#0a0a0a] rounded-xl p-6 shadow-lg">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              Top Processes
-            </h3>
-            <ProcessTable processes={formattedStats?.processes || []} loading={loading} />
-          </div>
+              {/* Process List */}
+              <div className="bg-white dark:bg-[#0a0a0a] rounded-xl p-6 shadow-lg">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  Top Processes
+                </h3>
+                <ProcessTable processes={formattedStats?.processes || []} loading={loading} />
+              </div>
+            </>
+          ) : (
+            <HistoryTab />
+          )}
         </main>
 
         {/* Settings Panel */}
@@ -458,7 +481,7 @@ function App() {
                 <h2 className="text-xl font-bold">Settings</h2>
                 <button
                   onClick={() => setSettingsOpen(false)}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#111]"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -515,7 +538,7 @@ function App() {
                       type="number"
                       value={Math.round(usageThreshold / (1024 * 1024))}
                       onChange={(e) => setUsageThreshold(parseInt(e.target.value) || 0)}
-                      className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#111] border-0 focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
                   <div>
@@ -524,7 +547,7 @@ function App() {
                       type="number"
                       value={Math.round(speedThreshold / (1024 * 1024))}
                       onChange={(e) => setSpeedThreshold(parseInt(e.target.value) || 0)}
-                      className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#111] border-0 focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
                 </div>
@@ -546,7 +569,7 @@ function App() {
                 </div>
 
                 {/* Data Export */}
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <div className="border-t border-gray-200 dark:border-gray-800 pt-6">
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Maintenance</h3>
                   <div className="flex gap-2">
                     <button

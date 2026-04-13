@@ -6,7 +6,9 @@ pub struct Database {
     conn: Connection,
 }
 
-#[derive(Debug, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct ProcessHistory {
     pub name: String,
     pub download_bytes: u64,

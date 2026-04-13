@@ -294,7 +294,10 @@ pub fn run() {
             format_speed_command,
             get_system_info,
             toggle_widget,
-            set_dynamic_icon_enabled
+            set_dynamic_icon_enabled,
+            get_history,
+            block_process,
+            allow_process
         ])
         .setup(move |app| {
             setup_tray(app.handle())?;
