@@ -1,12 +1,14 @@
 use crate::monitor_error::MonitorError;
 use crate::monitor_trait::{MonitoringTrait, GlobalStats, ProcessStats};
 
+#[allow(dead_code)]
 pub struct MockMonitor {
     pub global_stats: GlobalStats,
     pub process_stats: Vec<ProcessStats>,
 }
 
 impl MockMonitor {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             global_stats: GlobalStats {
