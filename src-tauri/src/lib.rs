@@ -47,7 +47,8 @@ use firewall::FirewallManager;
 pub struct AppState {
     pub monitor: Box<dyn MonitoringTrait + Send + Sync>,
     pub db: Mutex<Option<Database>>,
-    last_update: Mutex<i64>,
+    last_update_ipc: Mutex<i64>,
+    last_update_bg: Mutex<i64>,
     theme: Mutex<String>, // "dark" or "light"
     show_dynamic_icon: Mutex<bool>,
 }
@@ -80,7 +81,7 @@ fn get_network_usage(state: tauri::State<'_, Arc<AppState>>) -> Result<NetworkSt
         .as_secs() as i64;
 
     let delta_time = {
-        let mut last = state.last_update.lock().map_err(|e| e.to_string())?;
+        let mut last = state.last_update_ipc.lock().map_err(|e| e.to_string())?;
         let delta = if *last > 0 {
             ((current_time_sec - *last).max(1)) as f64
         } else {
@@ -266,7 +267,8 @@ pub fn run() {
     let app_state = Arc::new(AppState {
         monitor: Box::new(WindowsMonitor::new()),
         db: Mutex::new(None),
-        last_update: Mutex::new(0),
+        last_update_ipc: Mutex::new(0),
+        last_update_bg: Mutex::new(0),
         theme: Mutex::new("dark".to_string()),
         show_dynamic_icon: Mutex::new(true),
     });
@@ -333,7 +335,7 @@ pub fn run() {
                     .as_secs() as i64;
 
                 let delta_time = {
-                    let mut last = state.last_update.lock().unwrap();
+                    let mut last = state.last_update_bg.lock().unwrap();
                     let delta = if *last > 0 {
                         (current_time_sec - *last).max(1) as f64
                     } else {
