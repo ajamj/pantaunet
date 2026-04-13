@@ -371,24 +371,7 @@ pub fn run() {
             std::thread::spawn(move || loop {
                 std::thread::sleep(Duration::from_secs(1));
 
-                // 1. Refresh system/networks and get stats
-                let mut total_download = 0;
-                let mut total_upload = 0;
-                let mut is_connected = false;
-
-                if let Ok(mut system) = state.system.lock() {
-                    system.refresh_all();
-                }
-
-                if let Ok(mut networks) = state.networks.lock() {
-                    networks.refresh(true);
-                    let (down, up) = get_network_stats(&networks);
-                    total_download = down;
-                    total_upload = up;
-                    is_connected = is_online(&networks);
-                }
-
-                // 2. Calculate speeds
+                // 1. Calculate delta time and get current time
                 let current_time_sec = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
@@ -405,8 +388,46 @@ pub fn run() {
                     delta
                 };
 
+                // 2. Refresh system/networks and get stats
+                let mut total_download = 0;
+                let mut total_upload = 0;
+                let mut is_connected = false;
+                let mut top_processes: Vec<ProcessNetworkUsage> = Vec::new();
+
+                if let Ok(mut system) = state.system.lock() {
+                    system.refresh_all();
+
+                    // Task 1: Extract top 3 apps
+                    for (pid, process) in system.processes() {
+                        let name = process.name().to_string_lossy().to_string();
+                        if name.is_empty() { continue; }
+                        let disk_usage = process.disk_usage();
+                        if disk_usage.read_bytes == 0 && disk_usage.written_bytes == 0 { continue; }
+
+                        top_processes.push(ProcessNetworkUsage {
+                            pid: pid.as_u32(),
+                            name,
+                            download_bytes: disk_usage.read_bytes,
+                            upload_bytes: disk_usage.written_bytes,
+                            download_speed: (disk_usage.read_bytes as f64 / delta_time) as u64,
+                            upload_speed: (disk_usage.written_bytes as f64 / delta_time) as u64,
+                        });
+                    }
+                    top_processes.sort_by(|a, b| (b.download_bytes + b.upload_bytes).cmp(&(a.download_bytes + a.upload_bytes)));
+                    top_processes.truncate(3);
+                }
+
+                if let Ok(mut networks) = state.networks.lock() {
+                    networks.refresh(true);
+                    let (down, up) = get_network_stats(&networks);
+                    total_download = down;
+                    total_upload = up;
+                    is_connected = is_online(&networks);
+                }
+
+                // 3. Calculate total speeds
                 let (down_speed, up_speed) = {
-                    let mut last_down = state.last_total_down.lock().unwrap();
+                    let mut last_down = state.last_total_down.lock().unwrap();  
                     let mut last_up = state.last_total_up.lock().unwrap();
 
                     let ds = if *last_down > 0 {
@@ -426,24 +447,37 @@ pub fn run() {
                     (ds, us)
                 };
 
-                // 3. Update Tray
+                // 4. Update Tray
                 if let Some(tray) = app_handle.tray_by_id("main") {
                     // Update Icon
                     let buffer = icon_generator::generate_tray_icon(down_speed, up_speed);
-                    let icon = tauri::image::Image::new_owned(buffer, 32, 32);
+                    let icon = tauri::image::Image::new_owned(buffer, 32, 32);  
                     let _ = tray.set_icon(Some(icon));
 
-                    // Update Tooltip (Simple version for Wave 07-02)
+                    // Task 2: Implement dynamic tooltip generation
                     let status = if is_connected { "Online" } else { "Offline" };
-                    let tooltip = format!("Pantaunet: {}\nDown: {}\nUp: {}", 
-                        status, 
-                        format_speed(down_speed), 
+                    let mut tooltip = format!(
+                        "Pantaunet: {}\nDown: {} | Up: {}",
+                        status,
+                        format_speed(down_speed),
                         format_speed(up_speed)
                     );
+
+                    if !top_processes.is_empty() {
+                        tooltip.push_str("\n---");
+                        for (i, proc) in top_processes.iter().enumerate() {
+                            tooltip.push_str(&format!(
+                                "\n{}. {}: {}",
+                                i + 1,
+                                proc.name,
+                                format_speed(proc.download_speed + proc.upload_speed)
+                            ));
+                        }
+                    }
+
                     let _ = tray.set_tooltip(Some(&tooltip));
                 }
             });
-
             // Verify window initialization
             let main_window = app.get_webview_window("main");
             let widget_window = app.get_webview_window("widget");
