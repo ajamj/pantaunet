@@ -75,8 +75,8 @@
 | 7. Tray Enhancements | 3/3 | Completed | 2026-04-13 |
 | 8. Desktop Widget | 2/2 | Completed | 2026-04-13 |
 | 9. Settings & Integration | 1/1 | Completed | 2026-04-13 |
-| 10. Refactoring | 0/1 | Not started | - |
-| 11. Optimization | 0/1 | Not started | - |
+| 10. Refactoring | 1/1 | Completed | 2026-04-13 |
+| 11. Optimization | 1/1 | Completed | 2026-04-13 |
 | 12. Maintenance | 0/1 | Not started | - |
 
 ---

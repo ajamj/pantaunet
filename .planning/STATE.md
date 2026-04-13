@@ -14,15 +14,15 @@
 
 | Phase | Name | Status | Completion |
 |-------|------|--------|------------|
-| 10 | Refactoring: Rust Backend | Planned | 0% |
-| 11 | Optimization: Tray & Widget | Planned | 0% |
+| 10 | Refactoring: Rust Backend | Completed | 100% |
+| 11 | Optimization: Tray & Widget | Completed | 100% |
 | 12 | Maintenance: Dependency Update | Planned | 0% |
 
 ## Current Position
 
-- **Last completed**: Milestone v1.1 (Advanced Windows Integration)
-- **Current focus**: Milestone v1.2 (Maintenance & Refactor)
-- **Status**: Milestone v1.1 is fully complete. The project is now entering a stabilization phase to refactor code and improve performance before proceeding to v2.0 features.
+- **Last completed**: Phase 11 (UI Component Optimization)
+- **Current focus**: Phase 12 (Maintenance & Dependency Sync)
+- **Status**: Milestone v1.2 is progressing rapidly. Backend refactored and UI optimized with shared components and centralized state. Entering final maintenance phase for this milestone.
 
 ## Quick Links
 

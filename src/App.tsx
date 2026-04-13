@@ -8,14 +8,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import {
-  ArrowDown,
-  ArrowUp,
   Wifi,
   Settings,
   Moon,
   Sun,
-  Download,
-  Upload,
   Activity,
   X,
   Eye,
@@ -23,30 +19,17 @@ import {
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { Store } from "@tauri-apps/plugin-store";
 import {
   isPermissionGranted,
-  requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { Widget } from "./components/Widget";
-
-// Settings store — persisted across sessions
-const store = new (Store as any)("settings.json");
-
-interface AppSettings {
-  theme: string;
-  usageThresholdMB: number;
-  speedThresholdMBps: number;
-  updateIntervalMs: number;
-}
-
-const DEFAULT_SETTINGS: AppSettings = {
-  theme: "dark",
-  usageThresholdMB: 1000,
-  speedThresholdMBps: 10,
-  updateIntervalMs: 1000,
-};
+import { useAppStore } from "./store/appStore";
+import { SpeedDisplay } from "./components/ui/SpeedDisplay";
+import { MetricCard } from "./components/ui/MetricCard";
+import { Toggle } from "./components/ui/Toggle";
+import { StatusBadge } from "./components/ui/StatusBadge";
+import { ProcessTable } from "./components/ui/ProcessTable";
 
 interface ProcessNetworkUsage {
   pid: number;
@@ -67,25 +50,30 @@ interface NetworkStats {
 }
 
 function App() {
+  const {
+    darkMode,
+    usageThreshold,
+    speedThreshold,
+    updateInterval,
+    showSpeed,
+    showDynamicIcon,
+    showDesktopWidget,
+    setDarkMode,
+    setUsageThreshold,
+    setSpeedThreshold,
+    setUpdateInterval,
+    setShowSpeed,
+    setShowDynamicIcon,
+    setShowDesktopWidget,
+    loadSettings,
+  } = useAppStore();
+
   const [stats, setStats] = useState<NetworkStats | null>(null);
   const [history, setHistory] = useState<
     { time: string; download: number; upload: number; downloadStr: string; uploadStr: string }[]
   >([]);
-  const [darkMode, setDarkMode] = useState(true);
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [usageThreshold, setUsageThreshold] = useState(
-    DEFAULT_SETTINGS.usageThresholdMB * 1024 * 1024
-  );
-  const [speedThreshold, setSpeedThreshold] = useState(
-    DEFAULT_SETTINGS.speedThresholdMBps * 1024 * 1024
-  );
-  const [updateInterval, setUpdateInterval] = useState(
-    DEFAULT_SETTINGS.updateIntervalMs
-  );
-  const [showSpeed, setShowSpeed] = useState(true);
-  const [showDynamicIcon, setShowDynamicIcon] = useState(true);
-  const [showDesktopWidget, setShowDesktopWidget] = useState(false);
   const lastNotified = useRef<number>(0);
   const lastSpeedNotified = useRef<number>(0);
 
@@ -197,74 +185,35 @@ function App() {
 
   useEffect(() => {
     const init = async () => {
-      // Load persisted settings
-      const savedTheme = await store.get("theme") as string | null;
-      const savedUsageThreshold = await store.get("usageThresholdMB") as number | null;
-      const savedSpeedThreshold = await store.get("speedThresholdMBps") as number | null;
-      const savedInterval = await store.get("updateIntervalMs") as number | null;
-      const savedWidgetVisible = await store.get("widgetVisible") as boolean | null;
-      const savedDynamicIcon = await store.get("dynamicIconEnabled") as boolean | null;
-
-      if (savedTheme) setDarkMode(savedTheme === "dark");
-      if (savedUsageThreshold !== null && savedUsageThreshold !== undefined) {
-        setUsageThreshold(savedUsageThreshold * 1024 * 1024);
-      }
-      if (savedSpeedThreshold !== null && savedSpeedThreshold !== undefined) {
-        setSpeedThreshold(savedSpeedThreshold * 1024 * 1024);
-      }
-      if (savedInterval !== null && savedInterval !== undefined) {
-        setUpdateInterval(savedInterval);
-      }
-
-      // Default dynamic icon to true if not set
-      if (savedDynamicIcon === null || savedDynamicIcon === undefined) {
-        setShowDynamicIcon(true);
-        await invoke("set_dynamic_icon_enabled", { enabled: true });
-      } else {
-        setShowDynamicIcon(savedDynamicIcon);
-        await invoke("set_dynamic_icon_enabled", { enabled: savedDynamicIcon });
-      }
+      await loadSettings();
 
       // Restore widget visibility
       const windowLabel = (window as any).__TAURI_INTERNALS__?.metadata?.windowLabel;
       if (windowLabel === "main") {
-        const isVisible = savedWidgetVisible || false;
-        setShowDesktopWidget(isVisible);
-        
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");       
         const appWindow = getCurrentWindow();
-        const widgetWindow = await (appWindow as any).getWebviewWindow("widget");
-        if (widgetWindow && isVisible) {
+        const widgetWindow = await (appWindow as any).getWebviewWindow("widget");  
+        if (widgetWindow && showDesktopWidget) {
           await widgetWindow.show();
         }
       }
 
       setLoading(false);
-
-      // Request notification permission
-      const granted = await isPermissionGranted();
-      if (!granted) {
-        await requestPermission();
-      }
     };
     init();
 
     const unlistenSpeed = listen("toggle-speed", () => {
-      setShowSpeed((prev) => !prev);
+      setShowSpeed(!showSpeed);
     });
 
-    const unlistenTheme = listen<string>("theme-changed", async (event) => {
+    const unlistenTheme = listen<string>("theme-changed", async (event) => {       
       const newTheme = event.payload;
-      setDarkMode(newTheme === "dark");
-      await store.set("theme", newTheme);
-      await store.save();
+      await setDarkMode(newTheme === "dark");
     });
 
-    const unlistenWidget = listen("widget-visibility-changed", async (event: any) => {
+    const unlistenWidget = listen("widget-visibility-changed", (event: any) => {
       const visible = event.payload;
       setShowDesktopWidget(visible);
-      await store.set("widgetVisible", visible);
-      await store.save();
     });
 
     const interval = setInterval(async () => {
@@ -349,11 +298,14 @@ function App() {
         {/* Header */}
         <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500 rounded-lg">
+            <div className="p-2 bg-blue-500 rounded-lg shadow-md shadow-blue-500/20">
               <Wifi className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Pantaunet</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold">Pantaunet</h1>
+                <StatusBadge online={stats?.total_download !== undefined && stats.total_download > 0} />
+              </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Internet Usage Monitor
               </p>
@@ -373,18 +325,8 @@ function App() {
             </button>
             {showSpeed && formattedStats && (
               <div className="flex items-center gap-3 px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                <div className="flex items-center gap-1">
-                  <ArrowDown className="w-4 h-4 text-green-500" />
-                  <span className="text-sm font-medium text-green-500">
-                    {formattedStats.download_speed}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <ArrowUp className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm font-medium text-blue-500">
-                    {formattedStats.upload_speed}
-                  </span>
-                </div>
+                <SpeedDisplay type="download" value={formattedStats.download_speed} />
+                <SpeedDisplay type="upload" value={formattedStats.upload_speed} />
               </div>
             )}
             <button
@@ -399,39 +341,26 @@ function App() {
             >
               <Settings className="w-5 h-5" />
             </button>
-            </div>
-            </header>
+          </div>
+        </header>
 
             {/* Main Content */}
             <main className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-80px)]">
-            {/* Speed Meters */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
-              <div className="flex items-center gap-3 mb-4">
-                <ArrowDown className="w-6 h-6 text-green-500" />
-                <span className="text-gray-500 dark:text-gray-400">Download</span>
-              </div>
-              <div className="text-4xl font-bold text-green-500">
-                {formattedStats ? formattedStats.download_speed : "---"}
-              </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                Total: {formattedStats ? formattedStats.total_download : "---"}
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
-              <div className="flex items-center gap-3 mb-4">
-                <ArrowUp className="w-6 h-6 text-blue-500" />
-                <span className="text-gray-500 dark:text-gray-400">Upload</span>
-              </div>
-              <div className="text-4xl font-bold text-blue-500">
-                {formattedStats ? formattedStats.upload_speed : "---"}
-              </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                Total: {formattedStats ? formattedStats.total_upload : "---"}
-              </div>
-            </div>
-            </div>
+          {/* Speed Meters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <MetricCard 
+              title="Download" 
+              type="download"
+              value={formattedStats ? formattedStats.download_speed : "---"}
+              total={formattedStats ? formattedStats.total_download : "---"}
+            />
+            <MetricCard 
+              title="Upload" 
+              type="upload"
+              value={formattedStats ? formattedStats.upload_speed : "---"}
+              total={formattedStats ? formattedStats.total_upload : "---"}
+            />
+          </div>
 
           {/* Chart */}
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
@@ -488,74 +417,16 @@ function App() {
 
                   {/* Process List */}
                   <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
-                  Top Processes
-                  </h3>
-                  <div className="overflow-x-auto">
-                  <table className="w-full">
-                  <thead>
-                  <tr className="text-left text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-                    <th className="pb-3 font-medium">Process</th>
-                    <th className="pb-3 font-medium">PID</th>
-                    <th className="pb-3 font-medium text-right">
-                      <Download className="w-4 h-4 inline mr-1" />
-                      Download
-                    </th>
-                    <th className="pb-3 font-medium text-right">
-                      <Upload className="w-4 h-4 inline mr-1" />
-                      Upload
-                    </th>
-                    <th className="pb-3 font-medium text-right">Total</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  {formattedStats?.processes.map((proc, idx) => (
-                    <tr
-                      key={proc.pid}
-                      className="border-b border-gray-100 dark:border-gray-700 last:border-0"
-                    >
-                      <td className="py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400">#{idx + 1}</span>
-                          <span className="font-medium truncate max-w-[200px]">
-                            {proc.name}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3 text-gray-500 dark:text-gray-400">
-                        {proc.pid}
-                      </td>
-                      <td className="py-3 text-right text-green-500">
-                        {proc.download_speed}
-                      </td>
-                      <td className="py-3 text-right text-blue-500">
-                        {proc.upload_speed}
-                      </td>
-                      <td className="py-3 text-right">
-                        {proc.total}
-                      </td>
-                    </tr>
-                  ))}
-                  {(!stats || stats.processes.length === 0) && (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="py-8 text-center text-gray-500"
-                      >
-                        {loading ? "Loading..." : "No network data available"}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </main>
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Activity className="w-5 h-5" />
+                      Top Processes
+                    </h3>
+                    <ProcessTable processes={formattedStats?.processes || []} loading={loading} />
+                  </div>        </main>
 
         {/* Settings Panel */}
         {settingsOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-200">
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6 sticky top-0 bg-white dark:bg-gray-800 py-1">
                 <h2 className="text-xl font-bold">Settings</h2>
@@ -571,121 +442,62 @@ function App() {
                 {/* Windows Integration Section */}
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-blue-500 uppercase tracking-wider">Windows Integration</h3>
-                  
-                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <div>
-                      <p className="font-medium">Dynamic Tray Icon</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Display live speeds in the system tray</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={showDynamicIcon}
-                        onChange={async (e) => {
-                          const enabled = e.target.checked;
-                          setShowDynamicIcon(enabled);
-                          await store.set("dynamicIconEnabled", enabled);
-                          await store.save();
-                          await invoke("set_dynamic_icon_enabled", { enabled });
-                        }}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <div>
-                      <p className="font-medium">Desktop Widget</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Floating window on your desktop</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={showDesktopWidget}
-                        onChange={async (e) => {
-                          const enabled = e.target.checked;
-                          setShowDesktopWidget(enabled);
-                          await invoke("toggle_widget");
-                        }}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
+                  <Toggle 
+                    label="Dynamic Tray Icon"
+                    description="Display live speeds in the system tray"
+                    checked={showDynamicIcon}
+                    onChange={setShowDynamicIcon}
+                  />
+                  <Toggle 
+                    label="Desktop Widget"
+                    description="Floating window on your desktop"
+                    checked={showDesktopWidget}
+                    onChange={async (enabled) => {
+                      setShowDesktopWidget(enabled);
+                      await invoke("toggle_widget");
+                    }}
+                  />
                 </div>
 
-                {/* Theme Selection */}
+                {/* Appearance */}
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Appearance</h3>
                   <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex-1 justify-center">
-                      <input
-                        type="radio"
-                        name="theme"
-                        value="dark"
-                        checked={darkMode}
-                        onChange={async () => {
-                          setDarkMode(true);
-                          await store.set("theme", "dark");
-                          await store.save();
-                        }}
-                        className="w-4 h-4 text-blue-600"
-                      />
-                      <span>🌙 Dark</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex-1 justify-center">
-                      <input
-                        type="radio"
-                        name="theme"
-                        value="light"
-                        checked={!darkMode}
-                        onChange={async () => {
-                          setDarkMode(false);
-                          await store.set("theme", "light");
-                          await store.save();
-                        }}
-                        className="w-4 h-4 text-blue-600"
-                      />
-                      <span>☀️ Light</span>
-                    </label>
+                    <button
+                      onClick={() => setDarkMode(true)}
+                      className={`flex items-center gap-2 p-2 rounded-lg flex-1 justify-center transition-colors ${darkMode ? 'bg-blue-500 text-white' : 'bg-gray-50 dark:bg-gray-700/50'}`}
+                    >
+                      <Moon className="w-4 h-4" />
+                      <span>Dark</span>
+                    </button>
+                    <button
+                      onClick={() => setDarkMode(false)}
+                      className={`flex items-center gap-2 p-2 rounded-lg flex-1 justify-center transition-colors ${!darkMode ? 'bg-blue-500 text-white' : 'bg-gray-50 dark:bg-gray-700/50'}`}
+                    >
+                      <Sun className="w-4 h-4" />
+                      <span>Light</span>
+                    </button>
                   </div>
                 </div>
 
-                {/* Notifications Section */}
+                {/* Notifications */}
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Notifications</h3>
-                  
                   <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-500">
-                      Usage Notification Threshold (MB)
-                    </label>
+                    <label className="block text-xs font-medium mb-1 text-gray-500">Usage Threshold (MB)</label>
                     <input
                       type="number"
                       value={Math.round(usageThreshold / (1024 * 1024))}
-                      onChange={async (e) => {
-                        const mb = parseInt(e.target.value) || 0;
-                        setUsageThreshold(mb * 1024 * 1024);
-                        await store.set("usageThresholdMB", mb);
-                        await store.save();
-                      }}
+                      onChange={(e) => setUsageThreshold(parseInt(e.target.value) || 0)}
                       className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-500">
-                      Speed Notification Threshold (MB/s)
-                    </label>
+                    <label className="block text-xs font-medium mb-1 text-gray-500">Speed Threshold (MB/s)</label>
                     <input
                       type="number"
                       value={Math.round(speedThreshold / (1024 * 1024))}
-                      onChange={async (e) => {
-                        const mbps = parseInt(e.target.value) || 0;
-                        setSpeedThreshold(mbps * 1024 * 1024);
-                        await store.set("speedThresholdMBps", mbps);
-                        await store.save();
-                      }}
+                      onChange={(e) => setSpeedThreshold(parseInt(e.target.value) || 0)}
                       className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
@@ -693,17 +505,10 @@ function App() {
 
                 {/* Update Interval */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                    Update Frequency
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Update Frequency</label>
                   <select
                     value={updateInterval}
-                    onChange={async (e) => {
-                      const interval = parseInt(e.target.value);
-                      setUpdateInterval(interval);
-                      await store.set("updateIntervalMs", interval);
-                      await store.save();
-                    }}
+                    onChange={(e) => setUpdateInterval(parseInt(e.target.value))}
                     className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
                   >
                     <option value={500}>High (500ms)</option>
@@ -716,9 +521,7 @@ function App() {
 
                 {/* Data Export */}
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                    Maintenance
-                  </h3>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Maintenance</h3>
                   <div className="flex gap-2">
                     <button
                       onClick={exportCSV}
