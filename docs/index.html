@@ -1,740 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pantaunet - Internet Usage Monitor</title>
-  <meta name="description" content="Cross-platform desktop application for monitoring per-application internet usage with real-time speed display and notifications.">
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    :root {
-      --primary: #3b82f6;
-      --primary-dark: #2563eb;
-      --success: #22c55e;
-      --warning: #f59e0b;
-      --danger: #ef4444;
-      --dark: #0f172a;
-      --dark-card: #1e293b;
-      --gray: #64748b;
-      --light: #f8fafc;
-    }
-
-    body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: var(--light);
-      color: var(--dark);
-      line-height: 1.6;
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    /* Header */
-    header {
-      background: white;
-      border-bottom: 1px solid #e2e8f0;
-      padding: 16px 0;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-    }
-
-    header .container {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo-icon {
-      width: 40px;
-      height: 40px;
-      background: var(--primary);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .logo-icon svg {
-      width: 24px;
-      height: 24px;
-      color: white;
-    }
-
-    .logo-text h1 {
-      font-size: 20px;
-      font-weight: 700;
-    }
-
-    .logo-text p {
-      font-size: 12px;
-      color: var(--gray);
-    }
-
-    nav {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }
-
-    nav a {
-      text-decoration: none;
-      color: var(--gray);
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-
-    nav a:hover {
-      color: var(--dark);
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-weight: 600;
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-dark);
-    }
-
-    .btn-outline {
-      border: 2px solid #e2e8f0;
-      color: var(--dark);
-    }
-
-    .btn-outline:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-    }
-
-    /* Hero */
-    .hero {
-      padding: 160px 0 100px;
-      text-align: center;
-      background: linear-gradient(180deg, #eff6ff 0%, white 100%);
-    }
-
-    .hero h2 {
-      font-size: 56px;
-      font-weight: 800;
-      line-height: 1.1;
-      margin-bottom: 24px;
-      background: linear-gradient(135deg, var(--dark) 0%, var(--primary) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .hero p {
-      font-size: 20px;
-      color: var(--gray);
-      max-width: 600px;
-      margin: 0 auto 40px;
-    }
-
-    .hero-buttons {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      margin-bottom: 60px;
-    }
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 999px;
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--gray);
-    }
-
-    .hero-badge span {
-      color: var(--success);
-    }
-
-    /* Features */
-    .features {
-      padding: 100px 0;
-      background: white;
-    }
-
-    .features h3 {
-      text-align: center;
-      font-size: 40px;
-      font-weight: 700;
-      margin-bottom: 16px;
-    }
-
-    .features > .container > p {
-      text-align: center;
-      color: var(--gray);
-      font-size: 18px;
-      margin-bottom: 60px;
-    }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-    }
-
-    .feature-card {
-      padding: 32px;
-      border: 1px solid #e2e8f0;
-      border-radius: 16px;
-      transition: all 0.2s;
-    }
-
-    .feature-card:hover {
-      border-color: var(--primary);
-      box-shadow: 0 8px 32px rgba(59, 130, 246, 0.1);
-    }
-
-    .feature-icon {
-      width: 48px;
-      height: 48px;
-      background: #eff6ff;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 16px;
-    }
-
-    .feature-icon svg {
-      width: 24px;
-      height: 24px;
-      color: var(--primary);
-    }
-
-    .feature-card h4 {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .feature-card p {
-      color: var(--gray);
-      font-size: 15px;
-    }
-
-    /* Screenshots */
-    .screenshots {
-      padding: 100px 0;
-      background: #f1f5f9;
-    }
-
-    .screenshots h3 {
-      text-align: center;
-      font-size: 40px;
-      font-weight: 700;
-      margin-bottom: 16px;
-    }
-
-    .screenshots > .container > p {
-      text-align: center;
-      color: var(--gray);
-      font-size: 18px;
-      margin-bottom: 60px;
-    }
-
-    .screenshot-frame {
-      max-width: 900px;
-      margin: 0 auto;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-      border: 1px solid #e2e8f0;
-      background: var(--dark);
-    }
-
-    .screenshot-frame img {
-      width: 100%;
-      display: block;
-    }
-
-    .screenshot-placeholder {
-      width: 100%;
-      aspect-ratio: 16/10;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      background: linear-gradient(135deg, var(--dark-card) 0%, var(--dark) 100%);
-      color: #94a3b8;
-    }
-
-    .screenshot-placeholder svg {
-      width: 64px;
-      height: 64px;
-      opacity: 0.5;
-    }
-
-    .screenshot-caption {
-      text-align: center;
-      color: var(--gray);
-      font-size: 15px;
-      margin-top: 16px;
-    }
-
-    /* Installation */
-    .installation {
-      padding: 100px 0;
-      background: white;
-    }
-
-    .installation h3 {
-      text-align: center;
-      font-size: 40px;
-      font-weight: 700;
-      margin-bottom: 16px;
-    }
-
-    .installation > .container > p {
-      text-align: center;
-      color: var(--gray);
-      font-size: 18px;
-      margin-bottom: 60px;
-    }
-
-    .install-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-    }
-
-    .install-card {
-      padding: 32px;
-      border: 1px solid #e2e8f0;
-      border-radius: 16px;
-    }
-
-    .install-card h4 {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .install-card ol {
-      padding-left: 20px;
-    }
-
-    .install-card li {
-      color: var(--gray);
-      margin-bottom: 8px;
-      font-size: 15px;
-    }
-
-    .install-card code {
-      background: var(--light);
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 13px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-    }
-
-    .install-card a {
-      color: var(--primary);
-      text-decoration: none;
-    }
-
-    .install-card a:hover {
-      text-decoration: underline;
-    }
-
-    .build-source {
-      max-width: 700px;
-      margin: 40px auto 0;
-      padding: 24px;
-      background: var(--light);
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
-    }
-
-    .build-source h4 {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 12px;
-    }
-
-    .build-source pre {
-      background: var(--dark);
-      color: #e2e8f0;
-      padding: 16px;
-      border-radius: 8px;
-      overflow-x: auto;
-      font-size: 14px;
-    }
-
-    .build-source p {
-      color: var(--gray);
-      font-size: 14px;
-      margin-top: 8px;
-    }
-
-    /* Download */
-    .download {
-      padding: 100px 0;
-      background: var(--dark);
-      color: white;
-      text-align: center;
-    }
-
-    .download h3 {
-      font-size: 40px;
-      font-weight: 700;
-      margin-bottom: 16px;
-    }
-
-    .download > .container > p {
-      color: #94a3b8;
-      font-size: 18px;
-      margin-bottom: 40px;
-    }
-
-    .download-buttons {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .download-btn {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 16px 32px;
-      background: var(--primary);
-      border-radius: 12px;
-      color: white;
-      font-weight: 600;
-      font-size: 16px;
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-
-    .download-btn:hover {
-      background: var(--primary-dark);
-      transform: translateY(-2px);
-    }
-
-    .download-btn.secondary {
-      background: var(--dark-card);
-      border: 1px solid #334155;
-    }
-
-    .download-btn.secondary:hover {
-      background: #334155;
-    }
-
-    /* Footer */
-    footer {
-      padding: 40px 0;
-      background: white;
-      border-top: 1px solid #e2e8f0;
-      text-align: center;
-    }
-
-    footer p {
-      color: var(--gray);
-      font-size: 14px;
-    }
-
-    footer a {
-      color: var(--primary);
-      text-decoration: none;
-    }
-
-    footer a:hover {
-      text-decoration: underline;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .hero h2 {
-        font-size: 36px;
-      }
-
-      .features-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .install-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .hero-buttons {
-        flex-direction: column;
-      }
-
-      .download-buttons {
-        flex-direction: column;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pantaunet - Professional Internet Usage Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .academic-dark { background-color: #0f172a; }
+        .hero-gradient {
+            background: radial-gradient(circle at top right, #1e293b, #0f172a);
+        }
+    </style>
 </head>
-<body>
-  <header>
-    <div class="container">
-      <div class="logo">
-        <div class="logo-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
-            <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
-            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
-            <line x1="12" y1="20" x2="12" y2="20"/>
-          </svg>
+<body class="academic-dark text-slate-200">
+    <!-- Navigation -->
+    <nav class="border-b border-slate-800 py-4 px-6 md:px-12 flex justify-between items-center sticky top-0 bg-[#0f172a]/80 backdrop-blur-md z-50">
+        <div class="flex items-center gap-2">
+            <div class="bg-indigo-600 p-1.5 rounded-lg shadow-lg shadow-indigo-500/20">
+                <i class="fas fa-wifi text-white"></i>
+            </div>
+            <span class="text-xl font-bold tracking-tight">Pantaunet</span>
         </div>
-        <div class="logo-text">
-          <h1>Pantaunet</h1>
-          <p>Internet Usage Monitor</p>
+        <div class="flex gap-6 items-center">
+            <a href="https://github.com/ajamj/pantaunet" class="text-slate-400 hover:text-white transition-colors">
+                <i class="fab fa-github text-xl"></i>
+            </a>
+            <a href="#download" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-full text-sm font-semibold transition-all">
+                Download v2.0
+            </a>
         </div>
-      </div>
-      <nav>
-        <a href="#features">Features</a>
-        <a href="#screenshots">Screenshots</a>
-        <a href="#install">Install</a>
-        <a href="#download">Download</a>
-        <a href="https://github.com/ajamj/pantaunet" target="_blank">GitHub</a>
-      </nav>
-    </div>
-  </header>
+    </nav>
 
-  <section class="hero">
-    <div class="container">
-      <div class="hero-badge">
-        <span>●</span> Open Source
-      </div>
-      <h2>Monitor Your Internet Usage<br>Per Application</h2>
-      <p>
-        Pantaunet is a cross-platform desktop application that helps you understand 
-        which applications are consuming your internet bandwidth. Real-time monitoring, 
-        speed display, and usage alerts.
-      </p>
-      <div class="hero-buttons">
-        <a href="#download" class="btn btn-primary">
-          Download for Windows
-        </a>
-        <a href="https://github.com/ajamj/pantaunet" class="btn btn-outline" target="_blank">
-          View on GitHub
-        </a>
-      </div>
-    </div>
-  </section>
+    <!-- Hero -->
+    <header class="hero-gradient pt-24 pb-32 px-6 md:px-12 text-center overflow-hidden">
+        <div class="max-w-4xl mx-auto">
+            <span class="inline-block py-1 px-3 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold uppercase tracking-widest mb-6">
+                Now with v2.0 Advanced Analytics
+            </span>
+            <h1 class="text-5xl md:text-7xl font-extrabold text-white mb-8 tracking-tighter leading-tight">
+                Your Network, <br class="hidden md:block"> <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">Perfectly Monitored.</span>
+            </h1>
+            <p class="text-xl text-slate-400 mb-12 max-w-2xl mx-auto font-light leading-relaxed">
+                Pantaunet is a professional desktop application that gives you per-application visibility and control over your internet usage. Lightweight, accurate, and secure.
+            </p>
+            <div class="flex flex-col md:flex-row gap-4 justify-center items-center">
+                <a href="#download" class="w-full md:w-auto bg-white text-slate-900 px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 transition-transform shadow-xl">
+                    Get Pantaunet for Windows
+                </a>
+                <a href="https://github.com/ajamj/pantaunet" class="w-full md:w-auto bg-slate-800 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-slate-700 transition-colors border border-slate-700">
+                    View on GitHub
+                </a>
+            </div>
+        </div>
+    </header>
 
-  <section class="features" id="features">
-    <div class="container">
-      <h3>Features</h3>
-      <p>Everything you need to monitor your internet usage</p>
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-            </svg>
-          </div>
-          <h4>Real-Time Speed</h4>
-          <p>View your current download and upload speeds in real-time with numeric display in the UI.</p>
+    <!-- Features Section -->
+    <section class="py-32 px-6 md:px-12 bg-slate-900/50">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div class="space-y-4 group p-8 rounded-3xl border border-slate-800 hover:border-indigo-500/30 transition-all bg-slate-900 shadow-2xl">
+                <div class="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                    <i class="fas fa-bullseye text-xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-white">Precision Monitoring</h3>
+                <p class="text-slate-400 leading-relaxed font-light">
+                    Powered by Windows IPHLPAPI, we provide true network stats by filtering out local disk operations. 100% network accuracy.
+                </p>
+            </div>
+            <div class="space-y-4 group p-8 rounded-3xl border border-slate-800 hover:border-indigo-500/30 transition-all bg-slate-900 shadow-2xl">
+                <div class="w-12 h-12 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-400 group-hover:bg-cyan-500 group-hover:text-white transition-all">
+                    <i class="fas fa-database text-xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-white">Long-term History</h3>
+                <p class="text-slate-400 leading-relaxed font-light">
+                    Built-in SQLite engine tracks your usage over time. Visualize your bandwidth consumption patterns over weeks or months.
+                </p>
+            </div>
+            <div class="space-y-4 group p-8 rounded-3xl border border-slate-800 hover:border-indigo-500/30 transition-all bg-slate-900 shadow-2xl">
+                <div class="w-12 h-12 bg-rose-500/10 rounded-2xl flex items-center justify-center text-rose-400 group-hover:bg-rose-500 group-hover:text-white transition-all">
+                    <i class="fas fa-shield-halved text-xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-white">Application Control</h3>
+                <p class="text-slate-400 leading-relaxed font-light">
+                    Integrated Windows Firewall control. Block background applications from consuming your data with a single click.
+                </p>
+            </div>
         </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-              <line x1="8" y1="21" x2="16" y2="21"/>
-              <line x1="12" y1="17" x2="12" y2="21"/>
-            </svg>
-          </div>
-          <h4>Per-App Monitoring</h4>
-          <p>See exactly which applications are using your internet and how much data they've transferred.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>
-          </div>
-          <h4>Usage Alerts</h4>
-          <p>Get notified when your internet usage exceeds configurable thresholds.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-          </div>
-          <h4>Speed History</h4>
-          <p>Visualize your network usage over time with interactive charts.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707.707m12.728 0l-.707.707M6.343 17.657l-.707.707"/>
-              <circle cx="12" cy="12" r="4"/>
-            </svg>
-          </div>
-          <h4>Dark/Light Theme</h4>
-          <p>Choose between dark and light themes for comfortable monitoring any time of day.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-              <line x1="8" y1="21" x2="16" y2="21"/>
-              <line x1="12" y1="17" x2="12" y2="21"/>
-            </svg>
-          </div>
-          <h4>System Tray</h4>
-          <p>Run in the background with system tray integration and quick access menu.</p>
-        </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="screenshots" id="screenshots">
-    <div class="container">
-      <h3>Screenshots</h3>
-      <p>See Pantaunet in action</p>
-      <div class="screenshot-frame">
-        <div class="screenshot-placeholder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
-          </svg>
-          <span>Pantaunet Dashboard Screenshot</span>
+    <!-- Personality Highlight -->
+    <section class="py-24 px-6 md:px-12">
+        <div class="max-w-4xl mx-auto bg-gradient-to-br from-indigo-900/40 to-slate-900 p-12 rounded-[3rem] border border-indigo-500/20 text-center shadow-2xl">
+            <h2 class="text-3xl font-bold text-white mb-6">A Monitor with a Personality</h2>
+            <p class="text-lg text-slate-300 italic font-serif leading-relaxed mb-8">
+                "Main game terus lo......"
+            </p>
+            <p class="text-slate-400 font-light">
+                Our unique Humorous Insights engine provides witty feedback based on your usage. Pantaunet isn't just a tool; it's your brutally honest companion. Support for both English and Indonesian.
+            </p>
         </div>
-      </div>
-      <p class="screenshot-caption">The Pantaunet dashboard showing real-time speeds, network history chart, and per-application usage.</p>
-    </div>
-  </section>
+    </section>
 
-  <section class="installation" id="install">
-    <div class="container">
-      <h3>Installation</h3>
-      <p>Get started in minutes</p>
-      <div class="install-grid">
-        <div class="install-card">
-          <h4>🪟 Windows</h4>
-          <ol>
-            <li>Download the <a href="https://github.com/ajamj/pantaunet/releases" target="_blank">.exe installer</a></li>
-            <li>Run the installer and follow the prompts</li>
-            <li>Launch from Start Menu or system tray</li>
-          </ol>
+    <!-- Downloads -->
+    <section id="download" class="py-32 px-6 md:px-12 text-center">
+        <h2 class="text-4xl font-bold text-white mb-16 tracking-tight">Ready to take control?</h2>
+        <div class="max-w-3xl mx-auto flex flex-col md:flex-row gap-6">
+            <div class="flex-1 p-8 rounded-3xl border border-slate-800 bg-slate-900 flex flex-col items-center hover:scale-105 transition-transform shadow-2xl">
+                <i class="fab fa-windows text-4xl text-blue-400 mb-6"></i>
+                <h4 class="text-xl font-bold mb-4">Windows</h4>
+                <p class="text-sm text-slate-500 mb-8 font-light">Requires Windows 10/11 x64</p>
+                <a href="https://github.com/ajamj/pantaunet/releases/latest" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold transition-all">
+                    Download .EXE
+                </a>
+            </div>
+            <div class="flex-1 p-8 rounded-3xl border border-slate-800 bg-slate-900 flex flex-col items-center hover:scale-105 transition-transform shadow-2xl opacity-50">
+                <i class="fab fa-linux text-4xl text-orange-400 mb-6"></i>
+                <h4 class="text-xl font-bold mb-4">Linux</h4>
+                <p class="text-sm text-slate-500 mb-8 font-light">Coming soon in v2.1</p>
+                <button disabled class="w-full bg-slate-800 py-3 rounded-xl font-bold cursor-not-allowed">
+                    AppImage
+                </button>
+            </div>
+            <div class="flex-1 p-8 rounded-3xl border border-slate-800 bg-slate-900 flex flex-col items-center hover:scale-105 transition-transform shadow-2xl opacity-50">
+                <i class="fab fa-apple text-4xl text-slate-400 mb-6"></i>
+                <h4 class="text-xl font-bold mb-4">macOS</h4>
+                <p class="text-sm text-slate-500 mb-8 font-light">Coming soon in v2.1</p>
+                <button disabled class="w-full bg-slate-800 py-3 rounded-xl font-bold cursor-not-allowed">
+                    DMG
+                </button>
+            </div>
         </div>
-        <div class="install-card">
-          <h4>🐧 Linux</h4>
-          <ol>
-            <li>Download the <a href="https://github.com/ajamj/pantaunet/releases" target="_blank">.AppImage</a></li>
-            <li>Make it executable: <code>chmod +x Pantaunet-*.AppImage</code></li>
-            <li>Run: <code>./Pantaunet-*.AppImage</code></li>
-          </ol>
-        </div>
-        <div class="install-card">
-          <h4>🍎 macOS</h4>
-          <ol>
-            <li>Download the <a href="https://github.com/ajamj/pantaunet/releases" target="_blank">.dmg</a></li>
-            <li>Open the DMG and drag Pantaunet to Applications</li>
-            <li>Launch from Launchpad</li>
-          </ol>
-        </div>
-      </div>
-      <div class="build-source">
-        <h4>Build from Source</h4>
-        <pre>git clone https://github.com/ajamj/pantaunet.git
-cd pantaunet
-npm install
-npm run tauri build</pre>
-        <p>Requires Node.js 18+, Rust 1.70+, and npm.</p>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="download" id="download">
-    <div class="container">
-      <h3>Download Pantaunet</h3>
-      <p>Available for Windows, Linux, and macOS</p>
-      <div class="download-buttons">
-        <a href="https://github.com/ajamj/pantaunet/releases" class="download-btn" target="_blank">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Windows (.exe)
-        </a>
-        <a href="https://github.com/ajamj/pantaunet/releases" class="download-btn secondary" target="_blank">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Linux (.AppImage)
-        </a>
-        <a href="https://github.com/ajamj/pantaunet/releases" class="download-btn secondary" target="_blank">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          macOS (.dmg)
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <footer>
-    <div class="container">
-      <p>
-        Pantaunet is open source software released under the 
-        <a href="https://github.com/ajamj/pantaunet/blob/main/LICENSE">MIT License</a>.
-      </p>
-      <p style="margin-top: 8px;">
-        © 2026 Pantaunet. Built with Tauri + React.
-      </p>
-    </div>
-  </footer>
+    <!-- Footer -->
+    <footer class="py-16 border-t border-slate-800 text-center px-6 md:px-12">
+        <p class="text-slate-500 font-light mb-4">
+            &copy; 2026 Pantaunet Open Source Project. Licensed under MIT.
+        </p>
+        <div class="flex gap-6 justify-center">
+            <a href="https://github.com/ajamj/pantaunet" class="text-slate-500 hover:text-white transition-colors">GitHub</a>
+            <a href="#" class="text-slate-500 hover:text-white transition-colors">Privacy</a>
+            <a href="#" class="text-slate-500 hover:text-white transition-colors">Terms</a>
+        </div>
+    </footer>
 </body>
 </html>

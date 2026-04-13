@@ -8,6 +8,10 @@ src-tauri/dist/
 src-tauri/release/
 src-tauri/bundle/
 
+# Local Database
+*.db
+*.db-journal
+
 # IDE
 .idea/
 .vscode/
@@ -36,5 +40,14 @@ coverage/
 *.tmp
 *.temp
 
-#planning/ local-only
+# Planning/ local-only
 .planning/
+.beads/
+QWEN.md
+CLAUDE.md
+GEMINI.md
+STATE.md
+ROADMAP.md
+PROJECT.md
+REQUIREMENTS.md
+SERVICE-INVENTORY.md
