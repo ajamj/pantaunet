@@ -343,6 +343,19 @@ pub fn run() {
         .setup(move |app| {
             setup_tray(app.handle())?;
 
+            // Verify window initialization
+            let main_window = app.get_webview_window("main");
+            let widget_window = app.get_webview_window("widget");
+
+            match (main_window, widget_window) {
+                (Some(_), Some(_)) => {
+                    println!("Tauri: Multi-window setup confirmed (main, widget)");
+                }
+                _ => {
+                    eprintln!("Tauri Warning: Could not find all configured windows in setup");
+                }
+            }
+
             let state = state_clone.clone();
             std::thread::spawn(move || loop {
                 std::thread::sleep(Duration::from_secs(1));
