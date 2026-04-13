@@ -1,10 +1,19 @@
-# Pantaunet v1.0.0 - Release Notes
+# Pantaunet v1.2.0 - Release Notes
 
 ## What's New
 
-First release of Pantaunet — a cross-platform desktop application for monitoring per-application internet usage.
+Milestone v1.2 focusing on Backend Refactoring, UI Optimization, and Maintenance.
 
-## Features
+## Features (v1.2)
+
+- **Backend Abstraction** — Decoupled monitoring logic for better stability and future cross-platform support.
+- **Shared UI Library** — Unified components for Dashboard and Widget, ensuring visual consistency.
+- **Centralized State** — Faster and more reliable state management using Zustand.
+- **Floating Desktop Widget** — Real-time speeds directly on your desktop (Always-on-top).
+- **Dynamic Tray Icon** — Toggleable real-time speed display in your system tray.
+- **Structured Error Handling** — More informative feedback when system APIs are unavailable.
+
+## Features (v1.0 - v1.1)
 
 - **Real-Time Speed Monitoring** — View download and upload speeds in real-time
 - **Per-Application Usage** — See which applications are using your internet
@@ -14,7 +23,6 @@ First release of Pantaunet — a cross-platform desktop application for monitori
 - **System Tray** — Background residence with quick access menu and theme toggle
 - **Persistent Settings** — Your preferences saved between sessions
 - **Configurable Update Interval** — Choose refresh rate from 500ms to 10s
-
 ## Known Limitations
 
 - **Per-process IO includes disk + network**: On Windows, per-application download/upload values include all I/O operations (disk reads/writes, network traffic, device I/O). This is because sysinfo uses Windows GetProcessIoCounters API. A future release will use ETW-based tracking for network-only accuracy.

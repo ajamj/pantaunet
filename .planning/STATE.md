@@ -16,13 +16,13 @@
 |-------|------|--------|------------|
 | 10 | Refactoring: Rust Backend | Completed | 100% |
 | 11 | Optimization: Tray & Widget | Completed | 100% |
-| 12 | Maintenance: Dependency Update | Planned | 0% |
+| 12 | Maintenance: Dependency Update | Completed | 100% |
 
 ## Current Position
 
-- **Last completed**: Phase 11 (UI Component Optimization)
-- **Current focus**: Phase 12 (Maintenance & Dependency Sync)
-- **Status**: Milestone v1.2 is progressing rapidly. Backend refactored and UI optimized with shared components and centralized state. Entering final maintenance phase for this milestone.
+- **Last completed**: Phase 12 (Maintenance & Dependency Sync)
+- **Current focus**: Milestone v2.0 Planning
+- **Status**: Milestone v1.2 is fully complete. The project has undergone significant internal refactoring, UI component extraction, and dependency modernization. Pantaunet is now in a stable, professional state and ready for the next major release (v2.0).
 
 ## Quick Links
 

@@ -6,8 +6,10 @@ This file tracks the services, factories, and modules in the project. It is main
 
 | Service | Responsibility | Status |
 |---|---|---|
-| `get_network_usage` (Rust) | Per-process network IO collection | Active |
+| `WindowsMonitor` (Rust) | OS-specific monitoring implementation | Active |
+| `MonitoringTrait` (Rust) | Decoupled monitoring interface | Active |
 | `AppState` (Rust) | Global state management | Active |
+| `appStore` (Zustand) | Centralized frontend state management | Active |
 | `setup_tray` (Rust) | System tray management | Active |
 
 ## Frontend Components
@@ -15,9 +17,12 @@ This file tracks the services, factories, and modules in the project. It is main
 | Component | Responsibility | Status |
 |---|---|---|
 | `App.tsx` | Main dashboard & settings | Active |
-| `NetworkSpeedChart` | Real-time speed visualization | Active |
-| `ProcessList` | Ranked process table | Active |
-
+| `Widget.tsx` | Floating desktop speed indicator | Active |
+| `MetricCard` | Primary metric visualization | Active |
+| `SpeedDisplay` | Unified download/upload speed UI | Active |
+| `Toggle` | Shared setting switch component | Active |
+| `StatusBadge` | Real-time connectivity status | Active |
+| `ProcessTable` | Ranked process traffic list | Active |
 ## Metadata
 
 | Property | Value |
