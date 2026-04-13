@@ -203,7 +203,7 @@ fn get_system_info() -> HashMap<String, String> {
 
 #[tauri::command]
 fn test_dynamic_icon(app_handle: AppHandle) -> Result<(), String> {
-    let buffer = icon_generator::generate_tray_icon("1.0M", "0.5M");
+    let buffer = icon_generator::generate_tray_icon(1024 * 1024, 1024 * 512);
     if let Some(tray) = app_handle.tray_by_id("main") {
         let icon = tauri::image::Image::new_owned(buffer, 32, 32);
         tray.set_icon(Some(icon)).map_err(|e| e.to_string())?;
@@ -214,12 +214,14 @@ fn test_dynamic_icon(app_handle: AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn toggle_widget(app_handle: AppHandle) -> Result<(), String> {
     if let Some(window) = app_handle.get_webview_window("widget") {
-        if window.is_visible().unwrap_or(false) {
+        let is_visible = window.is_visible().unwrap_or(false);
+        if is_visible {
             window.hide().map_err(|e| e.to_string())?;
         } else {
             window.show().map_err(|e| e.to_string())?;
             window.set_focus().map_err(|e| e.to_string())?;
         }
+        let _ = app_handle.emit("widget-visibility-changed", !is_visible);
     }
     Ok(())
 }
