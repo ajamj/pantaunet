@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct ProcessStats {
     pub pid: u32,
     pub name: String,
+    pub exe_path: String,
     pub download_bytes: u64,
     pub upload_bytes: u64,
     pub download_speed: u64,

@@ -22,7 +22,7 @@ impl MockMonitor {
                 ProcessStats {
                     pid: 1234,
                     name: "mock_process".to_string(),
-                    download_bytes: 500,
+                    exe_path: "C:\\mock\\mock_process.exe".to_string(),                    download_bytes: 500,
                     upload_bytes: 250,
                     download_speed: 50,
                     upload_speed: 25,

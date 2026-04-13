@@ -24,7 +24,7 @@ interface AppState {
   setHistoryTimeRange: (range: number) => Promise<void>;
   
   blockedApps: string[];
-  blockApp: (name: string) => Promise<void>;
+  blockApp: (name: string, path: string) => Promise<void>;
   allowApp: (name: string) => Promise<void>;
 
   loadSettings: () => Promise<void>;
@@ -42,9 +42,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   blockedApps: [],
 
   setDarkMode: async (dark) => {
+    const themeStr = dark ? "dark" : "light";
     set({ darkMode: dark });
-    await tauriStore.set("theme", dark ? "dark" : "light");
+    await tauriStore.set("theme", themeStr);
     await tauriStore.save();
+    try {
+      await invoke("sync_theme_state", { theme: themeStr });
+    } catch (err) {
+      console.error("Failed to sync theme state:", err);
+    }
   },
 
   setUsageThreshold: async (mb) => {
@@ -103,9 +109,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  blockApp: async (name) => {
+  blockApp: async (name, path) => {
     try {
-      await invoke("block_process", { name, path: name });
+      await invoke("block_process", { name, path });
       const newBlocked = [...get().blockedApps, name];
       set({ blockedApps: newBlocked });
       await tauriStore.set("blockedApps", newBlocked);
@@ -139,8 +145,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const historyRange = await tauriStore.get("historyTimeRange") as number | null;
     const blockedApps = await tauriStore.get("blockedApps") as string[] | null;
 
+    const themeStr = theme ? theme : "dark";
+
     set({
-      darkMode: theme ? theme === "dark" : true,
+      darkMode: themeStr === "dark",
       usageThreshold: (usageMB || 1000) * 1024 * 1024,
       speedThreshold: (speedMBps || 10) * 1024 * 1024,
       updateInterval: interval || 1000,
@@ -149,5 +157,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       historyTimeRange: historyRange !== null ? historyRange : 86400,
       blockedApps: blockedApps || [],
     });
+
+    try {
+      await invoke("sync_theme_state", { theme: themeStr });
+    } catch (err) {
+      console.error("Failed to sync initial theme state:", err);
+    }
   },
 }));

@@ -49,13 +49,14 @@ impl FirewallManager {
     pub fn allow_app(name: &str) -> Result<(), FirewallError> {
         #[cfg(target_os = "windows")]
         {
+            let safe_name = name.replace('"', "_");
             let output = Command::new("netsh")
                 .args([
                     "advfirewall",
                     "firewall",
                     "delete",
                     "rule",
-                    &format!("name=\"Pantaunet_Block_{}\"", name),
+                    &format!("name=\"Pantaunet_Block_{}\"", safe_name),
                 ])
                 .output()
                 .map_err(|e| FirewallError::OsError(e.to_string()))?;

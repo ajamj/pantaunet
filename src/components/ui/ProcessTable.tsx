@@ -5,6 +5,7 @@ import { useAppStore } from "../../store/appStore";
 interface Process {
   pid: number;
   name: string;
+  exe_path: string;
   download_speed: string;
   upload_speed: string;
   total_download: string;
@@ -24,7 +25,7 @@ interface ProcessTableProps {
 type SortField = "name" | "pid" | "download_speed" | "upload_speed" | "total_download" | "total_upload";
 type SortOrder = "asc" | "desc";
 
-export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, loading }) => {
+export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, loading }) => {  
   const { blockedApps, blockApp, allowApp } = useAppStore();
   const [sortField, setSortField] = useState<SortField>("download_speed");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -63,7 +64,7 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, loading }
   }, [processes, sortField, sortOrder]);
 
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 opacity-30" />;
+    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 opacity-30" />;     
     return sortOrder === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />;
   };
 
@@ -72,7 +73,7 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, loading }
       <table className="w-full">
         <thead>
           <tr className="text-left text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-            <th 
+            <th
               className="pb-3 font-medium cursor-pointer hover:text-gray-700 dark:hover:text-gray-200"
               onClick={() => handleSort("name")}
             >
@@ -80,7 +81,7 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, loading }
                 Process <SortIcon field="name" />
               </div>
             </th>
-            <th 
+            <th
               className="pb-3 font-medium cursor-pointer hover:text-gray-700 dark:hover:text-gray-200"
               onClick={() => handleSort("pid")}
             >
@@ -88,7 +89,7 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, loading }
                 PID <SortIcon field="pid" />
               </div>
             </th>
-            <th 
+            <th
               className="pb-3 font-medium text-right cursor-pointer hover:text-gray-700 dark:hover:text-gray-200"
               onClick={() => handleSort("download_speed")}
             >
@@ -97,7 +98,7 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, loading }
                 Down <SortIcon field="download_speed" />
               </div>
             </th>
-            <th 
+            <th
               className="pb-3 font-medium text-right cursor-pointer hover:text-gray-700 dark:hover:text-gray-200"
               onClick={() => handleSort("upload_speed")}
             >
@@ -106,7 +107,7 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, loading }
                 Up <SortIcon field="upload_speed" />
               </div>
             </th>
-            <th 
+            <th
               className="pb-3 font-medium text-right cursor-pointer hover:text-gray-700 dark:hover:text-gray-200"
               onClick={() => handleSort("total_download")}
             >
@@ -114,7 +115,7 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, loading }
                 Total Down <SortIcon field="total_download" />
               </div>
             </th>
-            <th 
+            <th
               className="pb-3 font-medium text-right cursor-pointer hover:text-gray-700 dark:hover:text-gray-200"
               onClick={() => handleSort("total_upload")}
             >
@@ -146,10 +147,10 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, loading }
                 <td className="py-3 text-xs text-gray-500 dark:text-gray-400">
                   {proc.pid}
                 </td>
-                <td className="py-3 text-right text-emerald-500 text-sm font-medium">
+                <td className="py-3 text-right text-emerald-500 text-sm font-medium">   
                   {proc.download_speed}
                 </td>
-                <td className="py-3 text-right text-sky-500 text-sm font-medium">
+                <td className="py-3 text-right text-sky-500 text-sm font-medium">       
                   {proc.upload_speed}
                 </td>
                 <td className="py-3 text-right text-gray-600 dark:text-gray-400 text-xs font-mono">
@@ -160,10 +161,10 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, loading }
                 </td>
                 <td className="py-3 text-center">
                   <button
-                    onClick={() => isBlocked ? allowApp(proc.name) : blockApp(proc.name)}
+                    onClick={() => isBlocked ? allowApp(proc.name) : blockApp(proc.name, proc.exe_path)}
                     className={`p-1.5 rounded-lg transition-colors ${
-                      isBlocked 
-                        ? "bg-rose-100 text-rose-600 hover:bg-rose-200 dark:bg-rose-900/30 dark:text-rose-400" 
+                      isBlocked
+                        ? "bg-rose-100 text-rose-600 hover:bg-rose-200 dark:bg-rose-900/30 dark:text-rose-400"
                         : "bg-emerald-100 text-emerald-600 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400"
                     }`}
                     title={isBlocked ? "Allow Internet Access" : "Block Internet Access"}
@@ -173,8 +174,7 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, loading }
                 </td>
               </tr>
             );
-          })}
-          {sortedProcesses.length === 0 && (
+          })}          {sortedProcesses.length === 0 && (
             <tr>
               <td colSpan={7} className="py-8 text-center text-gray-500">
                 {loading ? "Loading..." : "No network data available"}

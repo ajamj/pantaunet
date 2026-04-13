@@ -169,6 +169,21 @@ fn toggle_widget(app_handle: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn sync_theme_state(state: tauri::State<'_, Arc<AppState>>, app_handle: AppHandle, theme: String) -> Result<(), String> {
+    if let Ok(mut theme_state) = state.theme.lock() {
+        *theme_state = theme.clone();
+        
+        // Update tray tooltip if possible
+        let tooltip_emoji = if theme == "dark" { "🌙" } else { "☀️" };
+        let tooltip = format!("{} {} — Pantaunet", tooltip_emoji, theme);
+        if let Some(tray) = app_handle.tray_by_id("main") {
+            let _ = tray.set_tooltip(Some(&tooltip));
+        }
+    }
+    Ok(())
+}
+
 fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let show_item = MenuItemBuilder::with_id("show", "Show Window").build(app)?;
     let hide_item = MenuItemBuilder::with_id("hide", "Hide Window").build(app)?;
@@ -299,7 +314,8 @@ pub fn run() {
             set_dynamic_icon_enabled,
             get_history,
             block_process,
-            allow_process
+            allow_process,
+            sync_theme_state
         ])
         .setup(move |app| {
             // CR-01: Initialize database during application setup

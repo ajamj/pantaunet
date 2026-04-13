@@ -108,10 +108,10 @@
 | BLK-01, ALW-02 | Phase 15 | Pending |
 | HIS-03, REP-04 | Phase 14 | Pending |
 | HUM-01 through HUM-03 | Phase 16 | Pending |
-| ISS-01, ISS-02 | Phase 17 | Pending |
-| ISS-03, ISS-04 | Phase 18 | Pending |
-| ISS-05, ISS-06 | Phase 19 | Pending |
-| ISS-07 | Phase 20 | Pending |
+| ISS-01, ISS-02 | Phase 17 | Complete |
+| ISS-03, ISS-04 | Phase 18 | Complete |
+| ISS-05, ISS-06 | Phase 19 | Complete |
+| ISS-07 | Phase 20 | Complete |
 
 ---
 

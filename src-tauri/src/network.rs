@@ -132,6 +132,8 @@ impl MonitoringTrait for WindowsMonitor {
                 continue;
             }
 
+            let exe_path = process.exe().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
+
             let disk_usage = process.disk_usage();
             let download_bytes = disk_usage.read_bytes;
             let upload_bytes = disk_usage.written_bytes;
@@ -143,6 +145,7 @@ impl MonitoringTrait for WindowsMonitor {
             processes.push(ProcessStats {
                 pid: pid.as_u32(),
                 name,
+                exe_path,
                 download_bytes,
                 upload_bytes,
                 download_speed: (download_bytes as f64 / delta_time) as u64,

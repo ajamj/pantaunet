@@ -31,10 +31,12 @@ import { MetricCard } from "./components/ui/MetricCard";
 import { Toggle } from "./components/ui/Toggle";
 import { StatusBadge } from "./components/ui/StatusBadge";
 import { ProcessTable } from "./components/ui/ProcessTable";
+import { formatBytes, formatSpeed } from "./utils/format";
 
 interface ProcessNetworkUsage {
   pid: number;
   name: string;
+  exe_path: string;
   download_bytes: number;
   upload_bytes: number;
   download_speed: number;
@@ -79,17 +81,18 @@ function App() {
   const lastNotified = useRef<number>(0);
   const lastSpeedNotified = useRef<number>(0);
 
-  const [formattedStats, setFormattedStats] = useState<{
+  const [formattedStats, setFormattedStats] = useState<{ 
     total_download: string;
     total_upload: string;
     download_speed: string;
     upload_speed: string;
-    processes: {
-      pid: number;
-      name: string;
-      download_speed: string;
-      upload_speed: string;
-      total_download: string;
+    processes: { 
+      pid: number; 
+      name: string; 
+      exe_path: string;
+      download_speed: string; 
+      upload_speed: string; 
+      total_download: string; 
       total_upload: string;
       download_speed_raw: number;
       upload_speed_raw: number;
@@ -98,34 +101,29 @@ function App() {
     }[];
   } | null>(null);
 
-  // Helper to format via backend
-  const formatBytes = (bytes: number) => invoke<string>("format_bytes_command", { bytes });
-  const formatSpeed = (bytesPerSec: number) => invoke<string>("format_speed_command", { bytesPerSec });
-
   // Update formatted stats when raw stats change
   useEffect(() => {
     if (!stats) return;
 
     const updateFormatted = async () => {
-      const [total_download, total_upload, download_speed, upload_speed] = await Promise.all([
-        formatBytes(stats.total_download),
-        formatBytes(stats.total_upload),
-        formatSpeed(stats.download_speed),
-        formatSpeed(stats.upload_speed)
-      ]);
+      const total_download = formatBytes(stats.total_download);
+      const total_upload = formatBytes(stats.total_upload);
+      const download_speed = formatSpeed(stats.download_speed);
+      const upload_speed = formatSpeed(stats.upload_speed);
 
-      const processes = await Promise.all(stats.processes.slice(0, 20).map(async (p) => ({
+      const processes = stats.processes.slice(0, 20).map((p) => ({
         pid: p.pid,
         name: p.name,
-        download_speed: await formatSpeed(p.download_speed),
-        upload_speed: await formatSpeed(p.upload_speed),
-        total_download: await formatBytes(p.download_bytes),
-        total_upload: await formatBytes(p.upload_bytes),
+        exe_path: p.exe_path,
+        download_speed: formatSpeed(p.download_speed),
+        upload_speed: formatSpeed(p.upload_speed),
+        total_download: formatBytes(p.download_bytes),
+        total_upload: formatBytes(p.upload_bytes),
         download_speed_raw: p.download_speed,
         upload_speed_raw: p.upload_speed,
         total_download_raw: p.download_bytes,
         total_upload_raw: p.upload_bytes
-      })));
+      }));
 
       setFormattedStats({
         total_download,
@@ -225,6 +223,7 @@ function App() {
     });
 
     const unlistenTheme = listen<string>("theme-changed", async (event) => {
+       
       const newTheme = event.payload;
       await setDarkMode(newTheme === "dark");
     });
@@ -241,12 +240,12 @@ function App() {
 
         const now = new Date();
         const time = `${now.getHours().toString().padStart(2, "0")}:${now
-          .getMinutes()}
+          .getMinutes()
           .toString()
           .padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
 
-        const ds = await formatSpeed(data.download_speed);
-        const us = await formatSpeed(data.upload_speed);
+        const ds = formatSpeed(data.download_speed);
+        const us = formatSpeed(data.upload_speed);
 
         setHistory((prev) => {
           const newHistory = [
@@ -538,7 +537,7 @@ function App() {
                       type="number"
                       value={Math.round(usageThreshold / (1024 * 1024))}
                       onChange={(e) => setUsageThreshold(parseInt(e.target.value) || 0)}
-                      className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#111] border-0 focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#111] border-0 focus:ring-2 focus:ring-blue-500 outline-none"     
                     />
                   </div>
                   <div>
@@ -547,7 +546,7 @@ function App() {
                       type="number"
                       value={Math.round(speedThreshold / (1024 * 1024))}
                       onChange={(e) => setSpeedThreshold(parseInt(e.target.value) || 0)}
-                      className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#111] border-0 focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-[#111] border-0 focus:ring-2 focus:ring-blue-500 outline-none"     
                     />
                   </div>
                 </div>
