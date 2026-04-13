@@ -1,32 +1,28 @@
-# Pantaunet v1.2.0 - Release Notes
+# Pantaunet v2.0.0 - Release Notes
 
 ## What's New
 
-Milestone v1.2 focusing on Backend Refactoring, UI Optimization, and Maintenance.
+Milestone v2.0 focusing on High Accuracy Monitoring, Data Analytics, and Application Control.
 
-## Features (v1.2)
+## Features (v2.0)
 
-- **Backend Abstraction** — Decoupled monitoring logic for better stability and future cross-platform support.
-- **Shared UI Library** — Unified components for Dashboard and Widget, ensuring visual consistency.
-- **Centralized State** — Faster and more reliable state management using Zustand.
+- **High Accuracy Monitoring** — Uses Windows IPHLPAPI/TCP-Table filtering to ensure stats reflect actual network traffic, excluding local disk I/O.
+- **Long-Term History** — Integrated SQLite database to track your network usage over days, weeks, and months.
+- **Application Control** — Built-in firewall integration to block/allow internet access for specific applications with a single click.
 - **Floating Desktop Widget** — Real-time speeds directly on your desktop (Always-on-top).
 - **Dynamic Tray Icon** — Toggleable real-time speed display in your system tray.
-- **Structured Error Handling** — More informative feedback when system APIs are unavailable.
+- **Humorous Insights** — A personality-driven engine that provides witty feedback based on your usage patterns.
 
-## Features (v1.0 - v1.1)
+## Features (v1.0 - v1.2)
 
-- **Real-Time Speed Monitoring** — View download and upload speeds in real-time
-- **Per-Application Usage** — See which applications are using your internet
-- **Usage Alerts** — Get notified when usage exceeds configurable thresholds
-- **Speed History** — Interactive charts showing network usage over time
-- **Dark/Light Theme** — Choose between themes for comfortable monitoring
-- **System Tray** — Background residence with quick access menu and theme toggle
-- **Persistent Settings** — Your preferences saved between sessions
-- **Configurable Update Interval** — Choose refresh rate from 500ms to 10s
-## Known Limitations
-
-- **Per-process IO includes disk + network**: On Windows, per-application download/upload values include all I/O operations (disk reads/writes, network traffic, device I/O). This is because sysinfo uses Windows GetProcessIoCounters API. A future release will use ETW-based tracking for network-only accuracy.
-
+- **Backend Abstraction** — Decoupled monitoring logic for better stability.
+- **Shared UI Library** — Unified components for Dashboard and Widget.
+- **Centralized State** — Faster and more reliable state management using Zustand.
+- **Real-Time Speed Monitoring** — View download and upload speeds in real-time.
+- **Per-Application Usage** — See which applications are using your internet.
+- **Usage Alerts** — Get notified when usage exceeds configurable thresholds.
+- **Dark/Light Theme** — Choose between themes.
+- **Persistent Settings** — Your preferences saved between sessions.
 ## Installation
 
 ### Windows
