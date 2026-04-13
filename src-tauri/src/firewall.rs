@@ -1,11 +1,13 @@
 use std::process::Command;
 
+#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub enum FirewallError {
     CommandFailed(String),
     OsError(String),
 }
 
+#[allow(dead_code)]
 pub struct FirewallManager;
 
 impl FirewallManager {
