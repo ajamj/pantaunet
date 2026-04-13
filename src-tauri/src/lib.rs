@@ -211,9 +211,23 @@ fn test_dynamic_icon(app_handle: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn toggle_widget(app_handle: AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("widget") {
+        if window.is_visible().unwrap_or(false) {
+            window.hide().map_err(|e| e.to_string())?;
+        } else {
+            window.show().map_err(|e| e.to_string())?;
+            window.set_focus().map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
 fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let show_item = MenuItemBuilder::with_id("show", "Show Window").build(app)?;
     let hide_item = MenuItemBuilder::with_id("hide", "Hide Window").build(app)?;
+    let widget_item = MenuItemBuilder::with_id("toggle_widget", "Toggle Widget").build(app)?;
     let theme_item = MenuItemBuilder::with_id("toggle_theme", "Toggle Theme: Dark → Light").build(app)?;
     let speed_item = MenuItemBuilder::with_id("speed", "Toggle Speed Display").build(app)?;
     let separator1 = tauri::menu::PredefinedMenuItem::separator(app)?;
@@ -222,6 +236,8 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let menu = MenuBuilder::new(app)
         .item(&show_item)
         .item(&hide_item)
+        .separator()
+        .item(&widget_item)
         .item(&theme_item)
         .separator()
         .item(&speed_item)
@@ -248,6 +264,9 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.hide();
                 }
+            }
+            "toggle_widget" => {
+                let _ = toggle_widget(app.clone());
             }
             "toggle_theme" => {
                 if let Some(state) = app.try_state::<Arc<AppState>>() {
@@ -338,7 +357,8 @@ pub fn run() {
             format_bytes_command,
             format_speed_command,
             get_system_info,
-            test_dynamic_icon
+            test_dynamic_icon,
+            toggle_widget
         ])
         .setup(move |app| {
             setup_tray(app.handle())?;
