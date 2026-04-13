@@ -21,10 +21,14 @@ interface AppState {
   setShowDynamicIcon: (show: boolean) => Promise<void>;
   setShowDesktopWidget: (show: boolean) => void;
   
+  blockedApps: string[];
+  blockApp: (name: string) => Promise<void>;
+  allowApp: (name: string) => Promise<void>;
+
   loadSettings: () => Promise<void>;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   darkMode: true,
   usageThreshold: 1000 * 1024 * 1024,
   speedThreshold: 10 * 1024 * 1024,
@@ -32,6 +36,7 @@ export const useAppStore = create<AppState>((set) => ({
   showSpeed: true,
   showDynamicIcon: true,
   showDesktopWidget: false,
+  blockedApps: [],
 
   setDarkMode: async (dark) => {
     set({ darkMode: dark });
@@ -89,6 +94,32 @@ export const useAppStore = create<AppState>((set) => ({
     }
   },
 
+  blockApp: async (name) => {
+    try {
+      await invoke("block_process", { name, path: name });
+      const newBlocked = [...get().blockedApps, name];
+      set({ blockedApps: newBlocked });
+      await tauriStore.set("blockedApps", newBlocked);
+      await tauriStore.save();
+    } catch (err) {
+      console.error("Failed to block app:", err);
+      alert(`Failed to block ${name}. Ensure you have administrator privileges.`);
+    }
+  },
+
+  allowApp: async (name) => {
+    try {
+      await invoke("allow_process", { name });
+      const newBlocked = get().blockedApps.filter(n => n !== name);
+      set({ blockedApps: newBlocked });
+      await tauriStore.set("blockedApps", newBlocked);
+      await tauriStore.save();
+    } catch (err) {
+      console.error("Failed to allow app:", err);
+      alert(`Failed to allow ${name}. Ensure you have administrator privileges.`);
+    }
+  },
+
   loadSettings: async () => {
     const theme = await tauriStore.get("theme") as string | null;
     const usageMB = await tauriStore.get("usageThresholdMB") as number | null;
@@ -96,6 +127,7 @@ export const useAppStore = create<AppState>((set) => ({
     const interval = await tauriStore.get("updateIntervalMs") as number | null;
     const dynamicIcon = await tauriStore.get("dynamicIconEnabled") as boolean | null;
     const widgetVisible = await tauriStore.get("widgetVisible") as boolean | null;
+    const blockedApps = await tauriStore.get("blockedApps") as string[] | null;
 
     set({
       darkMode: theme ? theme === "dark" : true,
@@ -104,6 +136,7 @@ export const useAppStore = create<AppState>((set) => ({
       updateInterval: interval || 1000,
       showDynamicIcon: dynamicIcon !== null ? dynamicIcon : true,
       showDesktopWidget: widgetVisible || false,
+      blockedApps: blockedApps || [],
     });
   },
 }));

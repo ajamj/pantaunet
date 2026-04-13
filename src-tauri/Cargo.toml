@@ -28,6 +28,9 @@ tokio = { version = "1", features = ["sync", "time", "rt"] }
 image = "0.25"
 ab_glyph = "0.2"
 thiserror = "2.0.18"
+rusqlite = { version = "0.39.0", features = ["bundled"] }
+directories = "6.0.0"
+windows = { version = "0.62.2", features = ["Win32_NetworkManagement_IpHelper", "Win32_Foundation", "Win32_Networking_WinSock"] }
 
 
 

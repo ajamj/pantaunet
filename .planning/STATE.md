@@ -5,24 +5,25 @@
 | Property | Value |
 |----------|-------|
 | **Project** | Pantaunet |
-| **Milestone** | v1.2 (Maintenance & Refactor) |
-| **Phase** | 10 - Refactoring & Technical Debt |
+| **Milestone** | v2.0 (Advanced Networking & Analytics) |
+| **Phase** | 16 - Humorous Insights & Personality |
 | **Created** | 2026-04-12 |
 | **Mode** | GSD |
 
-## Milestone v1.2 Progress
+## Milestone v2.0 Progress
 
 | Phase | Name | Status | Completion |
 |-------|------|--------|------------|
-| 10 | Refactoring: Rust Backend | Completed | 100% |
-| 11 | Optimization: Tray & Widget | Completed | 100% |
-| 12 | Maintenance: Dependency Update | Completed | 100% |
+| 13 | Advanced Monitoring: ETW / API | Completed | 100% |
+| 14 | Data Analytics: SQLite History | Completed | 100% |
+| 15 | App Control: Windows Firewall | Completed | 100% |
+| 16 | Humorous Insights & Personality | Planned | 0% |
 
 ## Current Position
 
-- **Last completed**: Phase 12 (Maintenance & Dependency Sync)
-- **Current focus**: Milestone v2.0 Planning
-- **Status**: Milestone v1.2 is fully complete. The project has undergone significant internal refactoring, UI component extraction, and dependency modernization. Pantaunet is now in a stable, professional state and ready for the next major release (v2.0).
+- **Last completed**: Phase 15 (App Control)
+- **Current focus**: Phase 16 (Humorous Insights)
+- **Status**: Milestone v2.0 is well underway. Core networking improvements (accuracy, analytics, firewall) are implemented. We are now transitioning to adding personality and engagement features.
 
 ## Quick Links
 

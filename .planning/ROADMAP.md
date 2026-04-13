@@ -23,44 +23,55 @@
 - [x] **Phase 9: Settings & Integration** - UI toggles & final audit
 - [ ] **Phase 10: Refactoring & Technical Debt** - Rust backend cleanup and unit tests
 - [ ] **Phase 11: UI Component Optimization** - Shared components & performance tuning
-- [ ] **Phase 12: Maintenance & Dependency Sync** - Dependency updates & prep for v2.0
+| 10. Refactoring | 1/1 | Completed | 2026-04-13 |
+| 11. Optimization | 1/1 | Completed | 2026-04-13 |
+| 12. Maintenance | 1/1 | Completed | 2026-04-13 |
+| 13. Advanced Monitoring | 1/1 | Completed | 2026-04-13 |
+| 14. Data Analytics | 1/1 | Completed | 2026-04-13 |
+| 15. App Control | 1/1 | Completed | 2026-04-13 |
+| 16. Humorous Insights | 0/1 | Not started | - |
 
 ---
 
 ## Phase Details
 
-### Phase 10: Refactoring & Technical Debt
-**Goal**: Clean up Rust backend and improve code quality
-**Depends on**: Phase 9
-**Requirements**: N/A
+### Phase 13: Advanced Monitoring (ETW)
+**Goal**: Achieve 100% network-only monitoring accuracy on Windows
+**Depends on**: Phase 12
 **Success criteria**:
-  1. Monitoring logic abstracted for easier expansion (consolidated PDH calls)
-  2. Centralized error handling for OS-specific monitoring APIs
-  3. Unit test coverage for core monitoring logic exceeds 70%
+  1. Monitoring logic switched from sysinfo/disk-io to Windows ETW or IPHLPAPI
+  2. Per-process network traffic excludes disk operations
+  3. Accuracy verified against Windows Resource Monitor
 **Plans**: TBD
 
-### Phase 11: UI Component Optimization
-**Goal**: Improve frontend performance and component reusability
-**Depends on**: Phase 10
-**Requirements**: N/A
+### Phase 14: Data Analytics & History
+**Goal**: Provide historical usage insights and long-term storage
+**Depends on**: Phase 13
 **Success criteria**:
-  1. Main dashboard and floating widget share a unified component library
-  2. Frontend render cycles optimized for high-frequency (1s) updates
-  3. Memory usage profile for the tray icon rendering engine remains < 20MB
+  1. SQLite integration for local storage of hourly/daily usage
+  2. Historical charts UI (7-day and 30-day views)
+  3. Automated background data aggregation
+**Plans**: TBD
+
+### Phase 15: Application Control
+**Goal**: Allow users to block internet access for specific apps
+**Depends on**: Phase 14
+**Success criteria**:
+  1. Integration with Windows Filtering Platform (WFP) or Windows Firewall
+  2. Block/Allow toggle UI in the process list
+  3. Persistent firewall rules managed by the application
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 12: Maintenance & Dependency Sync
-**Goal**: Update dependencies and prepare for v2.0
-**Depends on**: Phase 11
-**Requirements**: N/A
+### Phase 16: Humorous Insights & Personality
+**Goal**: Add engagement and humor via localized usage-based feedback
+**Depends on**: Phase 14
 **Success criteria**:
-  1. All Rust crates and NPM packages updated to latest stable versions
-  2. Full build & installer generation verified on Windows, Linux, and macOS
-  3. CHANGELOG and internal documentation updated for v1.2 release
+  1. Process categorization system (Games, Media, Work, etc.)
+  2. Personality Engine that triggers humorous messages based on usage thresholds
+  3. Support for English and Indonesian jokes via i18n
 **Plans**: TBD
-
----
+**UI hint**: yes
 
 ## Progress Table
 

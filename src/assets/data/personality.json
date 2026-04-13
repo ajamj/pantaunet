@@ -1,0 +1,19 @@
+{
+  "categories": {
+    "games": ["steam.exe", "epicgameslauncher.exe", "valorant.exe", "genshinimpact.exe", "minecraft.exe", "roblox.exe"],
+    "media": ["vlc.exe", "netflix.exe", "spotify.exe", "chrome.exe", "msedge.exe", "brave.exe"],
+    "work": ["vscode.exe", "idea64.exe", "slack.exe", "teams.exe", "zoom.exe", "outlook.exe", "excel.exe", "winword.exe"]
+  },
+  "jokes": {
+    "en": {
+      "games": ["Stop playing games all day!", "Still gaming? Your CPU needs a break.", "Main game terus lo......"],
+      "media": ["Stop watching, start working!", "Binge watching again? Go outside!", "Kerjain kerjaan lo, jangan nonton mulu"],
+      "work": ["Take a break, workaholic!", "Work work work... go on a vacation!", "Kerja mulu.. liburan dulu ngapa"]
+    },
+    "id": {
+      "games": ["Main game terus lo......", "Gak bosen apa main game mulu?", "Kuota abis buat game doang nih."],
+      "media": ["Kerjain kerjaan lo, jangan nonton mulu", "Nonton terus, kapan kelarnya?", "Drakor teroooosss..."],
+      "work": ["Kerja mulu.. liburan dulu ngapa", "Istirahat dulu, jangan dipaksa kerjanya.", "Sultan mah bebas, kerja terus!"]
+    }
+  }
+}

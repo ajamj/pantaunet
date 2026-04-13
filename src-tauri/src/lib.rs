@@ -14,6 +14,8 @@ mod monitor_error;
 mod monitor_trait;
 mod mock_monitor;
 mod utils;
+mod database;
+mod firewall;
 
 use monitor_trait::MonitoringTrait;
 use network::WindowsMonitor;
@@ -39,11 +41,35 @@ pub struct NetworkStats {
     pub timestamp: i64,
 }
 
+use database::{Database, ProcessHistory};
+use firewall::FirewallManager;
+
 pub struct AppState {
     pub monitor: Box<dyn MonitoringTrait + Send + Sync>,
+    pub db: Mutex<Option<Database>>,
     last_update: Mutex<i64>,
     theme: Mutex<String>, // "dark" or "light"
     show_dynamic_icon: Mutex<bool>,
+}
+
+#[tauri::command]
+fn get_history(state: tauri::State<'_, Arc<AppState>>, since: i64) -> Result<Vec<ProcessHistory>, String> {
+    if let Ok(db_opt) = state.db.lock() {
+        if let Some(db) = db_opt.as_ref() {
+            return db.get_history(since).map_err(|e| e.to_string());
+        }
+    }
+    Err("Database not initialized".to_string())
+}
+
+#[tauri::command]
+fn block_process(name: String, path: String) -> Result<(), String> {
+    FirewallManager::block_app(&name, &path).map_err(|e| format!("{:?}", e))
+}
+
+#[tauri::command]
+fn allow_process(name: String) -> Result<(), String> {
+    FirewallManager::allow_app(&name).map_err(|e| format!("{:?}", e))
 }
 
 #[tauri::command]
@@ -239,6 +265,7 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 pub fn run() {
     let app_state = Arc::new(AppState {
         monitor: Box::new(WindowsMonitor::new()),
+        db: Mutex::new(None),
         last_update: Mutex::new(0),
         theme: Mutex::new("dark".to_string()),
         show_dynamic_icon: Mutex::new(true),
@@ -306,6 +333,17 @@ pub fn run() {
                     Ok(stats) => stats,
                     Err(_) => Vec::new(),
                 };
+
+                // Save to database every 60 seconds
+                if current_time_sec % 60 == 0 {
+                    if let Ok(db_opt) = state.db.lock() {
+                        if let Some(db) = db_opt.as_ref() {
+                            for proc in &process_stats {
+                                let _ = db.insert_stats(&proc.name, proc.download_bytes, proc.upload_bytes);
+                            }
+                        }
+                    }
+                }
 
                 // 3. Update Tray
                 if let Some(tray) = app_handle.tray_by_id("main") {
