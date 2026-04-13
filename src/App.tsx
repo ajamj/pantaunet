@@ -111,6 +111,8 @@ function App() {
     DEFAULT_SETTINGS.updateIntervalMs
   );
   const [showSpeed, setShowSpeed] = useState(true);
+  const [showDynamicIcon, setShowDynamicIcon] = useState(true);
+  const [showDesktopWidget, setShowDesktopWidget] = useState(false);
   const lastNotified = useRef<number>(0);
   const lastSpeedNotified = useRef<number>(0);
 
@@ -183,6 +185,8 @@ function App() {
       const savedUsageThreshold = await store.get("usageThresholdMB") as number | null;
       const savedSpeedThreshold = await store.get("speedThresholdMBps") as number | null;
       const savedInterval = await store.get("updateIntervalMs") as number | null;
+      const savedWidgetVisible = await store.get("widgetVisible") as boolean | null;
+      const savedDynamicIcon = await store.get("dynamicIconEnabled") as boolean | null;
 
       if (savedTheme) setDarkMode(savedTheme === "dark");
       if (savedUsageThreshold !== null && savedUsageThreshold !== undefined) {
@@ -193,6 +197,29 @@ function App() {
       }
       if (savedInterval !== null && savedInterval !== undefined) {
         setUpdateInterval(savedInterval);
+      }
+
+      // Default dynamic icon to true if not set
+      if (savedDynamicIcon === null || savedDynamicIcon === undefined) {
+        setShowDynamicIcon(true);
+        await invoke("set_dynamic_icon_enabled", { enabled: true });
+      } else {
+        setShowDynamicIcon(savedDynamicIcon);
+        await invoke("set_dynamic_icon_enabled", { enabled: savedDynamicIcon });
+      }
+
+      // Restore widget visibility
+      const windowLabel = (window as any).__TAURI_INTERNALS__?.metadata?.windowLabel;
+      if (windowLabel === "main") {
+        const isVisible = savedWidgetVisible || false;
+        setShowDesktopWidget(isVisible);
+        
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        const appWindow = getCurrentWindow();
+        const widgetWindow = await (appWindow as any).getWebviewWindow("widget");
+        if (widgetWindow && isVisible) {
+          await widgetWindow.show();
+        }
       }
 
       setLoading(false);
@@ -213,6 +240,13 @@ function App() {
       const newTheme = event.payload;
       setDarkMode(newTheme === "dark");
       await store.set("theme", newTheme);
+      await store.save();
+    });
+
+    const unlistenWidget = listen("widget-visibility-changed", async (event: any) => {
+      const visible = event.payload;
+      setShowDesktopWidget(visible);
+      await store.set("widgetVisible", visible);
       await store.save();
     });
 
@@ -277,6 +311,7 @@ function App() {
       clearInterval(interval);
       unlistenSpeed.then((fn) => fn());
       unlistenTheme.then((fn) => fn());
+      unlistenWidget.then((fn) => fn());
     };
   }, [usageThreshold, updateInterval, speedThreshold]);
 
@@ -346,7 +381,7 @@ function App() {
         </header>
 
         {/* Main Content */}
-        <main className="p-6 space-y-6">
+        <main className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-80px)]">
           {/* Speed Meters */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
@@ -496,8 +531,8 @@ function App() {
         {/* Settings Panel */}
         {settingsOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl">
-              <div className="flex items-center justify-between mb-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6 sticky top-0 bg-white dark:bg-gray-800 py-1">
                 <h2 className="text-xl font-bold">Settings</h2>
                 <button
                   onClick={() => setSettingsOpen(false)}
@@ -507,12 +542,59 @@ function App() {
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Windows Integration Section */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-blue-500 uppercase tracking-wider">Windows Integration</h3>
+                  
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <div>
+                      <p className="font-medium">Dynamic Tray Icon</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Display live speeds in the system tray</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showDynamicIcon}
+                        onChange={async (e) => {
+                          const enabled = e.target.checked;
+                          setShowDynamicIcon(enabled);
+                          await store.set("dynamicIconEnabled", enabled);
+                          await store.save();
+                          await invoke("set_dynamic_icon_enabled", { enabled });
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <div>
+                      <p className="font-medium">Desktop Widget</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Floating window on your desktop</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showDesktopWidget}
+                        onChange={async (e) => {
+                          const enabled = e.target.checked;
+                          setShowDesktopWidget(enabled);
+                          await invoke("toggle_widget");
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                </div>
+
                 {/* Theme Selection */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Theme</label>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Appearance</h3>
                   <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="flex items-center gap-2 cursor-pointer p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex-1 justify-center">
                       <input
                         type="radio"
                         name="theme"
@@ -523,11 +605,11 @@ function App() {
                           await store.set("theme", "dark");
                           await store.save();
                         }}
-                        className="w-4 h-4"
+                        className="w-4 h-4 text-blue-600"
                       />
                       <span>🌙 Dark</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="flex items-center gap-2 cursor-pointer p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex-1 justify-center">
                       <input
                         type="radio"
                         name="theme"
@@ -538,53 +620,56 @@ function App() {
                           await store.set("theme", "light");
                           await store.save();
                         }}
-                        className="w-4 h-4"
+                        className="w-4 h-4 text-blue-600"
                       />
                       <span>☀️ Light</span>
                     </label>
                   </div>
                 </div>
 
-                {/* Usage Threshold */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Usage Notification Threshold (MB)
-                  </label>
-                  <input
-                    type="number"
-                    value={Math.round(usageThreshold / (1024 * 1024))}
-                    onChange={async (e) => {
-                      const mb = parseInt(e.target.value) || 0;
-                      setUsageThreshold(mb * 1024 * 1024);
-                      await store.set("usageThresholdMB", mb);
-                      await store.save();
-                    }}
-                    className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0"
-                  />
-                </div>
+                {/* Notifications Section */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Notifications</h3>
+                  
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500">
+                      Usage Notification Threshold (MB)
+                    </label>
+                    <input
+                      type="number"
+                      value={Math.round(usageThreshold / (1024 * 1024))}
+                      onChange={async (e) => {
+                        const mb = parseInt(e.target.value) || 0;
+                        setUsageThreshold(mb * 1024 * 1024);
+                        await store.set("usageThresholdMB", mb);
+                        await store.save();
+                      }}
+                      className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
 
-                {/* Speed Threshold */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Speed Notification Threshold (MB/s)
-                  </label>
-                  <input
-                    type="number"
-                    value={Math.round(speedThreshold / (1024 * 1024))}
-                    onChange={async (e) => {
-                      const mbps = parseInt(e.target.value) || 0;
-                      setSpeedThreshold(mbps * 1024 * 1024);
-                      await store.set("speedThresholdMBps", mbps);
-                      await store.save();
-                    }}
-                    className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0"
-                  />
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500">
+                      Speed Notification Threshold (MB/s)
+                    </label>
+                    <input
+                      type="number"
+                      value={Math.round(speedThreshold / (1024 * 1024))}
+                      onChange={async (e) => {
+                        const mbps = parseInt(e.target.value) || 0;
+                        setSpeedThreshold(mbps * 1024 * 1024);
+                        await store.set("speedThresholdMBps", mbps);
+                        await store.save();
+                      }}
+                      className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
                 </div>
 
                 {/* Update Interval */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Update Interval
+                  <label className="block text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Update Frequency
                   </label>
                   <select
                     value={updateInterval}
@@ -594,33 +679,33 @@ function App() {
                       await store.set("updateIntervalMs", interval);
                       await store.save();
                     }}
-                    className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0"
+                    className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
                   >
-                    <option value={500}>500ms</option>
-                    <option value={1000}>1s</option>
-                    <option value={2000}>2s</option>
-                    <option value={5000}>5s</option>
-                    <option value={10000}>10s</option>
+                    <option value={500}>High (500ms)</option>
+                    <option value={1000}>Normal (1s)</option>
+                    <option value={2000}>Balanced (2s)</option>
+                    <option value={5000}>Low (5s)</option>
+                    <option value={10000}>Minimal (10s)</option>
                   </select>
                 </div>
 
                 {/* Data Export */}
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                  <label className="block text-sm font-medium mb-3">
-                    Export Data
-                  </label>
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                    Maintenance
+                  </h3>
                   <div className="flex gap-2">
                     <button
                       onClick={exportCSV}
                       disabled={!stats || history.length === 0}
-                      className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                      className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                     >
                       Export CSV
                     </button>
                     <button
                       onClick={exportJSON}
                       disabled={!stats || history.length === 0}
-                      className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                      className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                     >
                       Export JSON
                     </button>
