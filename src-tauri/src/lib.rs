@@ -478,9 +478,14 @@ pub fn run() {
                     let _ = tray.set_tooltip(Some(&tooltip));
                 }
             });
-            // Verify window initialization
+            // Verify window initialization and enforce properties
             let main_window = app.get_webview_window("main");
             let widget_window = app.get_webview_window("widget");
+
+            if let Some(widget) = widget_window.as_ref() {
+                // Strictly enforce Always on Top
+                let _ = widget.set_always_on_top(true);
+            }
 
             match (main_window, widget_window) {
                 (Some(_), Some(_)) => {

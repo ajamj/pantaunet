@@ -27,8 +27,9 @@
       {
         "label": "widget",
         "title": "Pantaunet Widget",
-        "width": 180,
-        "height": 60,
+        "width": 160,
+        "height": 40,
+        "resizable": false,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
