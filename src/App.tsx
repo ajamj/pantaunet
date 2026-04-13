@@ -32,7 +32,7 @@ import {
 import { Widget } from "./components/Widget";
 
 // Settings store — persisted across sessions
-const store = new Store("settings.json");
+const store = new (Store as any)("settings.json");
 
 interface AppSettings {
   theme: string;
@@ -179,10 +179,10 @@ function App() {
   useEffect(() => {
     const init = async () => {
       // Load persisted settings
-      const savedTheme = await store.get<string>("theme");
-      const savedUsageThreshold = await store.get<number>("usageThresholdMB");
-      const savedSpeedThreshold = await store.get<number>("speedThresholdMBps");
-      const savedInterval = await store.get<number>("updateIntervalMs");
+      const savedTheme = await store.get("theme") as string | null;
+      const savedUsageThreshold = await store.get("usageThresholdMB") as number | null;
+      const savedSpeedThreshold = await store.get("speedThresholdMBps") as number | null;
+      const savedInterval = await store.get("updateIntervalMs") as number | null;
 
       if (savedTheme) setDarkMode(savedTheme === "dark");
       if (savedUsageThreshold !== null && savedUsageThreshold !== undefined) {

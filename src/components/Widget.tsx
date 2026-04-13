@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 interface ProcessNetworkUsage {
   pid: number;
@@ -35,8 +36,16 @@ function formatSpeed(bytesPerSec: number): string {
 }
 
 export function Widget({ stats }: WidgetProps) {
+  const handleMouseDown = () => {
+    getCurrentWindow().startDragging();
+  };
+
   return (
-    <div className="h-screen w-full bg-black/50 backdrop-blur-md rounded-lg flex items-center justify-around px-2 text-white overflow-hidden border border-white/10 select-none data-[tauri-drag-region]:cursor-default" data-tauri-drag-region>
+    <div 
+      className="h-screen w-full bg-black/50 backdrop-blur-md rounded-lg flex items-center justify-around px-2 text-white overflow-hidden border border-white/10 select-none cursor-default" 
+      onMouseDown={handleMouseDown}
+      data-tauri-drag-region
+    >
       <div className="flex items-center gap-1" data-tauri-drag-region>
         <ArrowDown className="w-4 h-4 text-green-500" />
         <span className="text-xs font-bold font-mono">
