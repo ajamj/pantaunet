@@ -201,6 +201,16 @@ fn get_system_info() -> HashMap<String, String> {
     info
 }
 
+#[tauri::command]
+fn test_dynamic_icon(app_handle: AppHandle) -> Result<(), String> {
+    let buffer = icon_generator::generate_tray_icon("1.0M", "0.5M");
+    if let Some(tray) = app_handle.tray_by_id("main") {
+        let icon = tauri::image::Image::new_owned(buffer, 32, 32);
+        tray.set_icon(Some(icon)).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let show_item = MenuItemBuilder::with_id("show", "Show Window").build(app)?;
     let hide_item = MenuItemBuilder::with_id("hide", "Hide Window").build(app)?;
@@ -327,7 +337,8 @@ pub fn run() {
             get_network_usage,
             format_bytes_command,
             format_speed_command,
-            get_system_info
+            get_system_info,
+            test_dynamic_icon
         ])
         .setup(move |app| {
             setup_tray(app.handle())?;
