@@ -74,7 +74,7 @@ export function Widget({ stats, downloadStr, uploadStr }: WidgetProps) {
 
   return (
     <div
-      className="group h-10 w-40 bg-[#121212]/80 backdrop-blur-md rounded-lg flex items-center justify-between px-2 text-slate-200/90 overflow-hidden border border-indigo-500/20 select-none cursor-default transition-all duration-300 hover:border-indigo-500/50 hover:shadow-[0_0_10px_rgba(99,102,241,0.3)]"
+      className="group h-full w-full bg-black/80 backdrop-blur-md rounded-lg flex items-center justify-between px-2 text-slate-200/90 overflow-hidden border border-white/10 select-none cursor-move transition-all duration-300 hover:border-indigo-500/50 hover:shadow-[0_0_10px_rgba(99,102,241,0.3)]"
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
       data-tauri-drag-region
