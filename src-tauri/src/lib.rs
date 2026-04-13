@@ -10,7 +10,7 @@ use tauri::{
 };
 
 mod network;
-mod icon_generator;
+pub mod icon_generator;
 use network::get_network_stats;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
