@@ -25,3 +25,11 @@ pub fn get_interface_stats(networks: &Networks) -> Vec<(String, u64, u64)> {
 
     interfaces
 }
+
+pub fn is_online(networks: &Networks) -> bool {
+    // If we see any traffic on any interface, we consider it online
+    // This is a simple heuristic for the tray status
+    networks.iter().any(|(_name, network)| {
+        network.received() > 0 || network.transmitted() > 0
+    })
+}

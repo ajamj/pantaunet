@@ -11,7 +11,7 @@ use tauri::{
 
 mod network;
 pub mod icon_generator;
-use network::get_network_stats;
+use network::{get_network_stats, is_online};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessNetworkUsage {
@@ -365,6 +365,85 @@ pub fn run() {
         .setup(move |app| {
             setup_tray(app.handle())?;
 
+            // Background monitoring loop (1s refresh)
+            let state = state_clone.clone();
+            let app_handle = app.handle().clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(Duration::from_secs(1));
+
+                // 1. Refresh system/networks and get stats
+                let mut total_download = 0;
+                let mut total_upload = 0;
+                let mut is_connected = false;
+
+                if let Ok(mut system) = state.system.lock() {
+                    system.refresh_all();
+                }
+
+                if let Ok(mut networks) = state.networks.lock() {
+                    networks.refresh(true);
+                    let (down, up) = get_network_stats(&networks);
+                    total_download = down;
+                    total_upload = up;
+                    is_connected = is_online(&networks);
+                }
+
+                // 2. Calculate speeds
+                let current_time_sec = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs() as i64;
+
+                let delta_time = {
+                    let mut last = state.last_update.lock().unwrap();
+                    let delta = if *last > 0 {
+                        (current_time_sec - *last).max(1) as f64
+                    } else {
+                        1.0
+                    };
+                    *last = current_time_sec;
+                    delta
+                };
+
+                let (down_speed, up_speed) = {
+                    let mut last_down = state.last_total_down.lock().unwrap();
+                    let mut last_up = state.last_total_up.lock().unwrap();
+
+                    let ds = if *last_down > 0 {
+                        (total_download.saturating_sub(*last_down) as f64 / delta_time) as u64
+                    } else {
+                        0
+                    };
+                    let us = if *last_up > 0 {
+                        (total_upload.saturating_sub(*last_up) as f64 / delta_time) as u64
+                    } else {
+                        0
+                    };
+
+                    *last_down = total_download;
+                    *last_up = total_upload;
+
+                    (ds, us)
+                };
+
+                // 3. Update Tray
+                if let Some(tray) = app_handle.tray_by_id("main") {
+                    // Update Icon
+                    let buffer = icon_generator::generate_tray_icon(down_speed, up_speed);
+                    let icon = tauri::image::Image::new_owned(buffer, 32, 32);
+                    let _ = tray.set_icon(Some(icon));
+
+                    // Update Tooltip (Simple version for Wave 07-02)
+                    let status = if is_connected { "Online" } else { "Offline" };
+                    let tooltip = format!("Pantaunet: {}\nDown: {}\nUp: {}", 
+                        status, 
+                        format_speed(down_speed), 
+                        format_speed(up_speed)
+                    );
+                    let _ = tray.set_tooltip(Some(&tooltip));
+                }
+            });
+
             // Verify window initialization
             let main_window = app.get_webview_window("main");
             let widget_window = app.get_webview_window("widget");
@@ -377,17 +456,6 @@ pub fn run() {
                     eprintln!("Tauri Warning: Could not find all configured windows in setup");
                 }
             }
-
-            let state = state_clone.clone();
-            std::thread::spawn(move || loop {
-                std::thread::sleep(Duration::from_secs(1));
-                if let Ok(mut system) = state.system.lock() {
-                    system.refresh_all();
-                }
-                if let Ok(mut networks) = state.networks.lock() {
-                    networks.refresh(true);
-                }
-            });
 
             Ok(())
         })
