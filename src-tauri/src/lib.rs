@@ -40,6 +40,7 @@ pub struct AppState {
     last_total_up: Mutex<u64>,
     last_update: Mutex<i64>,
     theme: Mutex<String>, // "dark" or "light"
+    show_dynamic_icon: Mutex<bool>,
 }
 
 fn format_bytes(bytes: u64) -> String {
@@ -202,6 +203,14 @@ fn get_system_info() -> HashMap<String, String> {
 }
 
 #[tauri::command]
+fn set_dynamic_icon_enabled(state: tauri::State<'_, Arc<AppState>>, enabled: bool) -> Result<(), String> {
+    if let Ok(mut show) = state.show_dynamic_icon.lock() {
+        *show = enabled;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 fn test_dynamic_icon(app_handle: AppHandle) -> Result<(), String> {
     let buffer = icon_generator::generate_tray_icon(1024 * 1024, 1024 * 512);
     if let Some(tray) = app_handle.tray_by_id("main") {
@@ -335,6 +344,7 @@ pub fn run() {
         last_total_up: Mutex::new(0),
         last_update: Mutex::new(0),
         theme: Mutex::new("dark".to_string()),
+        show_dynamic_icon: Mutex::new(true),
     });
 
     let state_clone = app_state.clone();
@@ -360,7 +370,8 @@ pub fn run() {
             format_speed_command,
             get_system_info,
             test_dynamic_icon,
-            toggle_widget
+            toggle_widget,
+            set_dynamic_icon_enabled
         ])
         .setup(move |app| {
             setup_tray(app.handle())?;
@@ -368,6 +379,8 @@ pub fn run() {
             // Background monitoring loop (1s refresh)
             let state = state_clone.clone();
             let app_handle = app.handle().clone();
+            let mut last_dynamic_icon_state = true;
+
             std::thread::spawn(move || loop {
                 std::thread::sleep(Duration::from_secs(1));
 
@@ -449,10 +462,21 @@ pub fn run() {
 
                 // 4. Update Tray
                 if let Some(tray) = app_handle.tray_by_id("main") {
+                    let is_dynamic_enabled = *state.show_dynamic_icon.lock().unwrap();
+                    
                     // Update Icon
-                    let buffer = icon_generator::generate_tray_icon(down_speed, up_speed);
-                    let icon = tauri::image::Image::new_owned(buffer, 32, 32);  
-                    let _ = tray.set_icon(Some(icon));
+                    if is_dynamic_enabled {
+                        let buffer = icon_generator::generate_tray_icon(down_speed, up_speed);
+                        let icon = tauri::image::Image::new_owned(buffer, 32, 32);  
+                        let _ = tray.set_icon(Some(icon));
+                        last_dynamic_icon_state = true;
+                    } else if last_dynamic_icon_state {
+                        // Reset to default icon once when disabled
+                        if let Some(icon) = app_handle.default_window_icon() {
+                            let _ = tray.set_icon(Some(icon.clone()));
+                        }
+                        last_dynamic_icon_state = false;
+                    }
 
                     // Task 2: Implement dynamic tooltip generation
                     let status = if is_connected { "Online" } else { "Offline" };
