@@ -99,14 +99,14 @@ export const HistoryTab: React.FC = () => {
           Network Usage History
         </h2>
         
-        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+        <div className="flex items-center gap-2 bg-gray-100 dark:bg-[#111] p-1 rounded-lg">
           {TIME_RANGES.map((range) => (
             <button
               key={range.label}
               onClick={() => setHistoryTimeRange(range.value)}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 historyTimeRange === range.value
-                  ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                  ? "bg-white dark:bg-[#0a0a0a] text-indigo-600 dark:text-indigo-400 shadow-sm"
                   : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
             >
@@ -116,7 +116,7 @@ export const HistoryTab: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
+      <div className="bg-white dark:bg-[#0a0a0a] rounded-xl p-6 shadow-lg">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
